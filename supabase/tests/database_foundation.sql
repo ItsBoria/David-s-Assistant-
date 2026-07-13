@@ -732,16 +732,14 @@ select throws_ok(
   'overlapping same-kind schedule periods are rejected'
 );
 
+with changed as (
+  update public.missions
+  set title = 'Attempted cross-owner update'
+  where id = '00000000-0000-4000-8000-000000000202'
+  returning id
+)
 select is(
-  (
-    with changed as (
-      update public.missions
-      set title = 'Attempted cross-owner update'
-      where id = '00000000-0000-4000-8000-000000000202'
-      returning id
-    )
-    select count(*) from changed
-  ),
+  (select count(*) from changed),
   0::bigint,
   'cross-owner updates affect no rows'
 );
