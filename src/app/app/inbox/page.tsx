@@ -17,7 +17,7 @@ export default async function MissionInboxPage() {
     redirect("/login?next=/app/inbox");
   }
 
-  const missions = await getMissionInbox({ ownerId, supabase });
+  const missionsResult = await getMissionInbox({ ownerId, supabase });
 
-  return <MissionInboxView missions={missions} />;
+  return <MissionInboxView missions={missionsResult.missions} loadError={missionsResult.error} />;
 }

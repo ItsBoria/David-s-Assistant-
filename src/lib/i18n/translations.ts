@@ -55,6 +55,9 @@ const en = {
   "mission.inbox.authRequired": "Sign in again before adding a mission.",
   "mission.inbox.validationSummary":
     "Check the highlighted mission fields and try again.",
+  "mission.inbox.loadErrorTitle": "Mission storage is not available yet",
+  "mission.inbox.loadErrorDescription":
+    "The page is loaded, but the database rejected the Mission Inbox query. Apply the Supabase migrations for this branch, then reload.",
   "mission.inbox.emptyTitle": "No missions are waiting",
   "mission.inbox.emptyDescription":
     "Add the first mission when work needs a home before it has a final time.",
@@ -249,6 +252,9 @@ const he = {
   "mission.inbox.authRequired": "Sign in again before adding a mission.",
   "mission.inbox.validationSummary":
     "Check the highlighted mission fields and try again.",
+  "mission.inbox.loadErrorTitle": "Mission storage is not available yet",
+  "mission.inbox.loadErrorDescription":
+    "The page is loaded, but the database rejected the Mission Inbox query. Apply the Supabase migrations for this branch, then reload.",
   "mission.inbox.emptyTitle": "No missions are waiting",
   "mission.inbox.emptyDescription":
     "Add the first mission when work needs a home before it has a final time.",

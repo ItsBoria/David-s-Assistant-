@@ -1,4 +1,4 @@
-import { CalendarDays, Clock3, Inbox } from "lucide-react";
+import { AlertCircle, CalendarDays, Clock3, Inbox } from "lucide-react";
 
 import { MissionCreateForm } from "@/components/missions/mission-create-form";
 import {
@@ -90,12 +90,29 @@ function MissionCard({ mission }: { mission: MissionInboxItem }) {
 }
 
 export function MissionInboxView({
+  loadError,
   missions,
 }: {
+  loadError?: "unavailable" | null;
   missions: MissionInboxItem[];
 }) {
   return (
     <div className="space-y-6">
+      {loadError ? (
+        <div
+          className="flex items-start gap-3 rounded-2xl border border-[var(--destructive)]/20 bg-[var(--destructive-soft)] px-4 py-3 text-sm leading-6 text-[var(--destructive)]"
+          role="alert"
+        >
+          <AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="font-semibold">
+              {t(DEFAULT_LOCALE, "mission.inbox.loadErrorTitle")}
+            </p>
+            <p>{t(DEFAULT_LOCALE, "mission.inbox.loadErrorDescription")}</p>
+          </div>
+        </div>
+      ) : null}
+
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
         <Card className="overflow-hidden">
           <CardHeader>

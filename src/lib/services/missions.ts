@@ -36,6 +36,19 @@ export async function createMissionForInbox(
 
 export async function getMissionInbox(
   context: MissionServiceContext,
-): Promise<MissionInboxItem[]> {
-  return listMissionInboxItems(context.supabase, context.ownerId);
+): Promise<
+  | { error: null; missions: MissionInboxItem[] }
+  | { error: "unavailable"; missions: [] }
+> {
+  try {
+    return {
+      error: null,
+      missions: await listMissionInboxItems(context.supabase, context.ownerId),
+    };
+  } catch {
+    return {
+      error: "unavailable",
+      missions: [],
+    };
+  }
 }
