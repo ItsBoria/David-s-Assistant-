@@ -43,6 +43,20 @@ describe("mission validation", () => {
     expect(result.description).toBeNull();
   });
 
+  it("accepts already-normalized optional text from the client resolver", () => {
+    const result = createMissionSchema.parse({
+      category: null,
+      description: null,
+      estimatedDurationMinutes: 45,
+      priority: MissionPriority.LOW,
+      selectedDate: "2026-07-16",
+      title: "Review inbox",
+    });
+
+    expect(result.category).toBeNull();
+    expect(result.description).toBeNull();
+  });
+
   it("rejects missing essentials with field-level messages", () => {
     const result = createMissionSchema.safeParse({
       category: "",

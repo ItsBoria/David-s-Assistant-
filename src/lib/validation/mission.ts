@@ -41,7 +41,14 @@ const optionalTrimmedText = (maxLength: number, tooLongMessage: TranslationKey) 
     .string()
     .trim()
     .max(maxLength, { message: tooLongMessage })
-    .transform((value) => (value.length > 0 ? value : null));
+    .nullish()
+    .transform((value) => {
+      if (typeof value !== "string") {
+        return null;
+      }
+
+      return value.length > 0 ? value : null;
+    });
 
 const localDateSchema = z
   .string()

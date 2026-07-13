@@ -11,6 +11,22 @@ export type CreateMissionActionResult =
   | { ok: true; message: string }
   | { ok: false; message: string };
 
+function missionActionErrorDetails(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return { name: "unknown" };
+  }
+
+  const record = error as Record<string, unknown>;
+
+  return {
+    code: typeof record.code === "string" ? record.code : undefined,
+    details: typeof record.details === "string" ? record.details : undefined,
+    hint: typeof record.hint === "string" ? record.hint : undefined,
+    message: typeof record.message === "string" ? record.message : undefined,
+    name: typeof record.name === "string" ? record.name : undefined,
+  };
+}
+
 export async function createMissionAction(
   input: unknown,
 ): Promise<CreateMissionActionResult> {
@@ -46,7 +62,9 @@ export async function createMissionAction(
       message: t(DEFAULT_LOCALE, "mission.inbox.created"),
       ok: true,
     };
-  } catch {
+  } catch (error) {
+    console.error("mission.create.failed", missionActionErrorDetails(error));
+
     return {
       message: t(DEFAULT_LOCALE, "mission.inbox.unavailable"),
       ok: false,
