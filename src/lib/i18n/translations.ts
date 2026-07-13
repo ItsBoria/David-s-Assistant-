@@ -31,6 +31,35 @@ const en = {
   "navigation.missionInbox.emptyTitle": "No missions are waiting",
   "navigation.missionInbox.emptyDescription":
     "Unscheduled missions will collect here once mission creation is available in the next product phase.",
+  "mission.inbox.pageTitle": "Mission Inbox",
+  "mission.inbox.pageDescription":
+    "Capture work with a target date before it receives a final time on your calendar.",
+  "mission.inbox.formTitle": "Add a mission",
+  "mission.inbox.formDescription":
+    "Start with the essentials. Scheduling and splitting can come later.",
+  "mission.inbox.titleLabel": "Mission title",
+  "mission.inbox.titlePlaceholder": "e.g. Prepare the client proposal",
+  "mission.inbox.descriptionLabel": "Description",
+  "mission.inbox.descriptionPlaceholder":
+    "Add context, constraints, or a definition of done.",
+  "mission.inbox.durationLabel": "Duration in minutes",
+  "mission.inbox.targetDateLabel": "Target date",
+  "mission.inbox.priorityLabel": "Priority",
+  "mission.inbox.categoryLabel": "Category",
+  "mission.inbox.categoryPlaceholder": "Optional, e.g. Sales",
+  "mission.inbox.submit": "Add mission",
+  "mission.inbox.submitting": "Adding mission…",
+  "mission.inbox.created": "Mission added to your inbox.",
+  "mission.inbox.unavailable":
+    "Mission creation is temporarily unavailable. Please try again.",
+  "mission.inbox.authRequired": "Sign in again before adding a mission.",
+  "mission.inbox.validationSummary":
+    "Check the highlighted mission fields and try again.",
+  "mission.inbox.emptyTitle": "No missions are waiting",
+  "mission.inbox.emptyDescription":
+    "Add the first mission when work needs a home before it has a final time.",
+  "mission.inbox.durationMinutes": "{{minutes}} min",
+  "mission.inbox.targetDate": "Target {{date}}",
   "navigation.peopleAndMeetings.short": "People",
   "navigation.peopleAndMeetings.description":
     "Keep the people and fixed commitments around your work.",
@@ -114,6 +143,21 @@ const en = {
   "validation.fullName.required": "Enter your full name.",
   "validation.fullName.tooShort": "Full name must contain at least 2 characters.",
   "validation.fullName.tooLong": "Full name must contain at most 100 characters.",
+  "validation.mission.title.required": "Enter a mission title.",
+  "validation.mission.title.tooLong":
+    "Mission title must contain at most 240 characters.",
+  "validation.mission.description.tooLong":
+    "Description must contain at most 2,000 characters.",
+  "validation.mission.category.tooLong":
+    "Category must contain at most 80 characters.",
+  "validation.mission.duration.required": "Enter a mission duration.",
+  "validation.mission.duration.tooSmall":
+    "Duration must be at least 1 minute.",
+  "validation.mission.duration.tooLarge":
+    "Duration must be at most 10,080 minutes.",
+  "validation.mission.targetDate.required": "Choose a target date.",
+  "validation.mission.targetDate.invalid": "Choose a valid target date.",
+  "validation.mission.priority.invalid": "Choose a valid priority.",
   "weekday.sunday": "Sunday",
   "weekday.monday": "Monday",
   "weekday.tuesday": "Tuesday",
@@ -181,6 +225,35 @@ const he = {
   "navigation.missionInbox.emptyTitle": "אין משימות שממתינות",
   "navigation.missionInbox.emptyDescription":
     "משימות שטרם שובצו ייאספו כאן לאחר שהוספת משימות תהיה זמינה בשלב המוצר הבא.",
+  "mission.inbox.pageTitle": "Mission Inbox",
+  "mission.inbox.pageDescription":
+    "Capture work with a target date before it receives a final time on your calendar.",
+  "mission.inbox.formTitle": "Add a mission",
+  "mission.inbox.formDescription":
+    "Start with the essentials. Scheduling and splitting can come later.",
+  "mission.inbox.titleLabel": "Mission title",
+  "mission.inbox.titlePlaceholder": "e.g. Prepare the client proposal",
+  "mission.inbox.descriptionLabel": "Description",
+  "mission.inbox.descriptionPlaceholder":
+    "Add context, constraints, or a definition of done.",
+  "mission.inbox.durationLabel": "Duration in minutes",
+  "mission.inbox.targetDateLabel": "Target date",
+  "mission.inbox.priorityLabel": "Priority",
+  "mission.inbox.categoryLabel": "Category",
+  "mission.inbox.categoryPlaceholder": "Optional, e.g. Sales",
+  "mission.inbox.submit": "Add mission",
+  "mission.inbox.submitting": "Adding mission…",
+  "mission.inbox.created": "Mission added to your inbox.",
+  "mission.inbox.unavailable":
+    "Mission creation is temporarily unavailable. Please try again.",
+  "mission.inbox.authRequired": "Sign in again before adding a mission.",
+  "mission.inbox.validationSummary":
+    "Check the highlighted mission fields and try again.",
+  "mission.inbox.emptyTitle": "No missions are waiting",
+  "mission.inbox.emptyDescription":
+    "Add the first mission when work needs a home before it has a final time.",
+  "mission.inbox.durationMinutes": "{{minutes}} min",
+  "mission.inbox.targetDate": "Target {{date}}",
   "navigation.peopleAndMeetings.short": "אנשים",
   "navigation.peopleAndMeetings.description":
     "ריכוז האנשים וההתחייבויות הקבועות שסביב העבודה שלך.",
@@ -260,6 +333,21 @@ const he = {
   "validation.fullName.required": "הזינו שם מלא.",
   "validation.fullName.tooShort": "השם המלא חייב להכיל לפחות 2 תווים.",
   "validation.fullName.tooLong": "השם המלא יכול להכיל עד 100 תווים.",
+  "validation.mission.title.required": "Enter a mission title.",
+  "validation.mission.title.tooLong":
+    "Mission title must contain at most 240 characters.",
+  "validation.mission.description.tooLong":
+    "Description must contain at most 2,000 characters.",
+  "validation.mission.category.tooLong":
+    "Category must contain at most 80 characters.",
+  "validation.mission.duration.required": "Enter a mission duration.",
+  "validation.mission.duration.tooSmall":
+    "Duration must be at least 1 minute.",
+  "validation.mission.duration.tooLarge":
+    "Duration must be at most 10,080 minutes.",
+  "validation.mission.targetDate.required": "Choose a target date.",
+  "validation.mission.targetDate.invalid": "Choose a valid target date.",
+  "validation.mission.priority.invalid": "Choose a valid priority.",
   "weekday.sunday": "יום ראשון",
   "weekday.monday": "יום שני",
   "weekday.tuesday": "יום שלישי",

@@ -1,7 +1,7 @@
 # Codebase Guide
 
 Last updated: 2026-07-13  
-Implementation baseline: Phase 1 (foundation)
+Implementation baseline: Phase 1 plus first Phase 2 mission-inbox slice
 
 This document is the durable map of David's Work-Week Assistant. Code and ordered Supabase migrations remain authoritative if this guide ever drifts. Every change must update the affected sections, the decision log when a new architectural choice is made, and the change history.
 
@@ -17,7 +17,7 @@ David's Work-Week Assistant is a private planning workspace centered on a Sunday
 
 The planned journeys are: create an account; define normal and date-specific work hours; capture missions; automatically plan fixed and flexible work around meetings and unavailable time; track recurring occurrences and completion; interact through the web or Telegram; receive reliable reminders; and export a selected week to PDF or DOCX.
 
-Phase 1 currently implements:
+Implemented so far:
 
 - A Next.js App Router application with strict TypeScript, Tailwind CSS v4, shadcn/ui conventions, security headers, linting, build scripts, and CI.
 - Supabase email/password sign-up, sign-in, confirmation routes, sign-out, SSR cookie handling, protected `/app` routes, and safe same-origin redirects.
@@ -25,8 +25,11 @@ Phase 1 currently implements:
 - A normalized PostgreSQL foundation with owner-preserving foreign keys, RLS, integrity triggers, query indexes, a read-only calendar view, and a private export bucket.
 - Shared serializable domain types, validation/error contracts, English/Hebrew translation scaffolding, and timezone-safe Sunday-to-Thursday date helpers.
 - Unit, browser smoke-test, pgTAP database/RLS, and GitHub Actions infrastructure.
+- A first Phase 2 Mission Inbox slice: signed-in users can create selected-date, unscheduled missions through a React Hook Form client backed by a Server Action, a shared Mission service, a Supabase repository, and the existing RLS-protected `missions` table. The inbox lists the user's latest selected-date unscheduled missions from PostgreSQL.
 
 Phases 2–8 remain planned: work-schedule and mission CRUD, the calendar, deterministic scheduling and rescheduling, recurrence generation, meetings and contacts UI, Telegram and reminder workers, PDF/DOCX generation, and production hardening. The Phase 1 schema anticipates those capabilities; it does not make them operational.
+
+Current Phase 2 note: basic selected-date mission capture and Mission Inbox reading are now operational. The rest of Phase 2 and later phases remain planned.
 
 ## 2. Architecture overview
 
@@ -56,7 +59,7 @@ Supabase
   `-- Storage -----------> private work-week-exports bucket
 ```
 
-There is no Phase 1 domain data-access layer: the application only calls Supabase Auth. Domain tables are not yet read or written by the UI.
+The first domain data-access path now exists for Mission Inbox only. `/app/inbox` calls a thin Server Action and Server Component boundary, which delegate to `src/lib/services/missions.ts` and `src/lib/repositories/missions.ts`. Those modules use the regular SSR Supabase client plus the signed-in user's JWT, so PostgreSQL/RLS remains the final authorization boundary. Other domain tables are not yet read or written by the UI.
 
 ### Target architecture for later phases
 
@@ -84,16 +87,19 @@ Planned background work must run in Supabase scheduled jobs/Edge Functions or an
 | `src/app/` | Next.js routes, layouts, metadata, route handlers, and thin Server Action entry points. Route groups separate auth pages from `/app`. | Reusable business rules, provider clients, secret constants, or duplicated repository queries. |
 | `src/app/(auth)/` | Public login/sign-up pages and the three current auth Server Actions. | Scheduling, mission, meeting, or notification logic. |
 | `src/app/auth/` | Supabase callback/OTP confirmation handlers and the user-safe auth error page. | Arbitrary redirect handling or internal error details. |
-| `src/app/app/` | Authenticated shell layout and the four Phase 1 destination pages. | Fake sample data or actions that imply later-phase features work. |
+| `src/app/app/` | Authenticated shell layout and destination pages. `/app/inbox` owns the thin Mission Inbox route and Server Action entry point. | Fake sample data or duplicated repository/business logic. |
 | `src/components/auth/` | Auth presentation, React Hook Form clients, localized field errors, and copy. | Direct service-role access or raw database mutations. |
 | `src/components/app-shell/` | Navigation configuration, responsive desktop/mobile navigation, account display, and shell header. | Domain data fetching or scheduling decisions. |
 | `src/components/foundation/` | Honest empty-state presentation used by unfinished destinations. | Placeholder buttons with no real behavior. |
+| `src/components/missions/` | Mission Inbox presentation, create form, and mission-specific form messages. | Direct database queries, service-role access, or scheduling decisions. |
 | `src/components/ui/` | Small reusable shadcn-style primitives (`Button`, `Card`, `Input`, `Label`). | Product-specific workflows or network calls. |
 | `src/lib/domain/` | Serializable domain values, discriminated unions, transition/split invariants, notification capabilities, and public error shapes. | React components, Next.js APIs, provider SDK calls, or persistence-specific query code. |
 | `src/lib/dates/` | IANA-timezone-aware local-date and Sunday-to-Thursday week calculations. | Locale copy, UI rendering, or database access. |
 | `src/lib/i18n/` | Translation dictionaries, locale normalization, language tags, and LTR/RTL metadata. | Scattered feature logic. New user-facing copy should be centralized here as localization is completed. |
 | `src/lib/security/` | Cross-cutting input-security helpers such as same-origin redirect validation. | Secrets or provider configuration. |
 | `src/lib/supabase/` | Browser, server, and proxy client construction plus public-env validation. | Service-role clients in browser-reachable modules or domain-specific queries. Future privileged clients must be explicitly server-only. |
+| `src/lib/repositories/` | Server-only persistence adapters that map Supabase rows to domain-facing DTOs. The current implementation covers Mission Inbox queries/inserts. | React components, form state, or business decisions that belong in services. |
+| `src/lib/services/` | Server-only business workflow functions shared by route actions/components. The current implementation covers basic selected-date mission creation and inbox listing. | Provider SDK details, UI state, or direct browser imports. |
 | `src/lib/validation/` | Reusable Zod boundary schemas and safe field-error mapping. | Database writes or UI state. |
 | `supabase/migrations/` | Ordered, reviewable schema, RLS, function, trigger, index, and Storage changes. | Production personal data, plaintext secrets, or undocumented dashboard-only assumptions. |
 | `supabase/tests/` | Transactional pgTAP structural and behavioral database/RLS verification. | Tests that require production users or production data. |
@@ -102,7 +108,7 @@ Planned background work must run in Supabase scheduled jobs/Edge Functions or an
 | `.github/` | CI and dependency-update automation. | Runtime credentials or deploy-specific secrets in source. |
 | Root configuration | Next.js, TypeScript, ESLint, PostCSS/Tailwind, Vitest, Playwright, pnpm, shadcn, environment example, and repository instructions. | Feature implementations that belong under `src/` or migrations. |
 
-Future repositories, services, workers, provider adapters, report models, and export templates do not exist yet. When added, keep them in explicit server-only directories and preserve dependency direction: routes/handlers -> services -> repositories/providers, never the reverse.
+Future workers, provider adapters, report models, and export templates do not exist yet. Existing and future repositories/services must stay server-only and preserve dependency direction: routes/handlers -> services -> repositories/providers, never the reverse.
 
 ## 4. Database schema
 
@@ -151,7 +157,7 @@ All 25 public tables have RLS enabled. `anon` and `PUBLIC` have no table access.
 - **Service only:** `telegram_link_tokens` and `telegram_update_log` expose no authenticated/anonymous policies or grants.
 - `service_role` has all table privileges and bypasses RLS by Supabase design. It must only exist in trusted server/Edge environments.
 
-No Phase 1 runtime service reads or writes the domain tables. Service names in the catalog below identify the planned ownership boundary, not existing executable classes.
+The Mission Inbox runtime path reads and writes the `missions` table for authenticated owners using RLS-protected selected-date, unscheduled mission rows. Other service names in the catalog below still identify planned ownership boundaries, not existing executable classes.
 
 ### Identity and preferences tables
 
@@ -193,7 +199,7 @@ Normalized series rule shared by recurring missions or meetings. Columns: `id`, 
 
 #### `missions`
 
-The durable mission definition and scheduling intent, not a calendar block. Columns: identity/ownership/optional `recurrence_rule_id`; title/description/priority/status; `scheduling_mode` and duration; mode-specific `earliest_start_date`, `latest_date`, `deadline`, fixed timestamps, selected date, allowed weekday/date arrays; lock and split fields; category/notes/source; postponed count; timestamps. Composite recurrence FK preserves ownership and restricts deletion. Checks enforce text/duration/count bounds, valid dates/weekdays, a feasible split partition, and an exact shape for each scheduling mode. Status/provenance triggers enforce the shared transition matrix, reserve completion outcomes for trusted transactions, and prevent browser writes from claiming system/Telegram/API provenance. Named indexes cover owner/status, active deadline, mode, recurrence, and GIN weekday/date membership. Planned Mission, Scheduling, Recurrence, Completion, and Audit services use it. RLS: owner `SELECT/INSERT/UPDATE`; no browser physical delete.
+The durable mission definition and scheduling intent, not a calendar block. Columns: identity/ownership/optional `recurrence_rule_id`; title/description/priority/status; `scheduling_mode` and duration; mode-specific `earliest_start_date`, `latest_date`, `deadline`, fixed timestamps, selected date, allowed weekday/date arrays; lock and split fields; category/notes/source; postponed count; timestamps. Composite recurrence FK preserves ownership and restricts deletion. Checks enforce text/duration/count bounds, valid dates/weekdays, a feasible split partition, and an exact shape for each scheduling mode. Status/provenance triggers enforce the shared transition matrix, reserve completion outcomes for trusted transactions, and prevent browser writes from claiming system/Telegram/API provenance. Named indexes cover owner/status, active deadline, mode, recurrence, and GIN weekday/date membership. The implemented Mission Inbox service currently inserts and lists `selected_date` + `unscheduled` rows with `source_channel = web`. Planned Scheduling, Recurrence, Completion, and Audit services will use the remaining lifecycle capabilities. RLS: owner `SELECT/INSERT/UPDATE`; no browser physical delete.
 
 #### `mission_occurrences`
 
@@ -574,7 +580,7 @@ Rollback success includes restored auth, owner isolation, no duplicate notificat
 
 | Layer | Implemented Phase 1 coverage | Required later |
 | --- | --- | --- |
-| Unit/Vitest | Auth normalization/bounds/errors; mission status transitions and split feasibility; error contract; safe redirects; locale/direction helpers; Sunday-to-Thursday/DST/date validation with half-open bounds. | Priority/deadline scoring, work/override availability, slot subtraction, conflict detection, splitting placements, recurrence, reminder times, report-data preparation. |
+| Unit/Vitest | Auth normalization/bounds/errors; mission creation validation; mission status transitions and split feasibility; error contract; safe redirects; locale/direction helpers; Sunday-to-Thursday/DST/date validation with half-open bounds. | Priority/deadline scoring, work/override availability, slot subtraction, conflict detection, splitting placements, recurrence, reminder times, report-data preparation. |
 | Database/pgTAP | 17 transactional checks: schema/enums/indexes/triggers/grants/RLS structure, bootstrap, two-owner isolation, security-invoker view isolation, feasible/impossible split policies, completion/provenance guards, completion snapshot/identity immutability, physical-delete denial, period-overlap rejection, service-only token denial, anonymous denial, and private bucket. | Service transaction integration, rescheduling, recurrence idempotency, completion/outbox/update idempotency, retry claims, export metadata/storage authorization. |
 | Browser/Playwright | Desktop Chrome and Pixel 7 projects verify the public login form, semantics, validation, and recovery after errors without live credentials. | Real local auth/confirmation and protected shell; mission, plan, meeting, work-hours, completion, Telegram-with-mocks, and export journeys. |
 | CI | Separate quality (`lint`, typecheck, unit, build), Chromium E2E, and Docker-backed Supabase reset/pgTAP jobs. Dependabot covers npm and Actions. | Provider contract tests, Edge Function tests, export visual/content regression, load/concurrency checks, accessibility audit. |
@@ -600,10 +606,10 @@ High-risk scheduling tests must include DST boundaries, Sunday/Thursday/Friday t
 
 ## 17. Known limitations
 
-- Only Phase 1 is implemented. All four protected product destinations show empty states.
-- There are no repositories or shared Mission, Meeting, WorkSchedule, Scheduling, Recurrence, Completion, Reminder, Notification, Contact, Telegram, Export, or Audit service implementations.
-- The database permits owner writes for ordinary domain tables, with additional lifecycle guards on missions/occurrences/sessions, but no UI/server workflow uses them. The future architecture should route writes through shared services.
-- No weekly schedule, override, mission, calendar, recurrence, meeting, contact, completion, reminder, Telegram, or export end-user workflow exists.
+- Phase 1 is implemented plus a narrow Mission Inbox slice. My Week, People and Meetings, and Settings still show honest empty states.
+- Only the Mission service/repository exists, and only for selected-date unscheduled mission creation/listing. Meeting, WorkSchedule, Scheduling, Recurrence, Completion, Reminder, Notification, Contact, Telegram, Export, and Audit service implementations do not exist yet.
+- The database permits owner writes for ordinary domain tables, with additional lifecycle guards on missions/occurrences/sessions. The implemented mission workflow routes through shared server-side service/repository modules; future workflows should follow that pattern.
+- No weekly schedule, override, calendar, recurrence, meeting, contact, completion, reminder, Telegram, or export end-user workflow exists. Mission editing, deletion, completion, recurrence, flexible deadlines, weekday/date-set constraints, fixed-time mission creation, and splitting controls are not implemented.
 - The deterministic scheduler, scoring policy, preview/result contract, transaction API, and automatic rescheduling are not implemented.
 - Recurrence rules and occurrence uniqueness exist, but there is no generator or editing-scope transaction.
 - Telegram tables/contracts exist, but there is no bot/webhook/linking/callback/parser/provider worker. No notification provider is active.
