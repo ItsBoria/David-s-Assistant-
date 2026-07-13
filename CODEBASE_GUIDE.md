@@ -515,7 +515,7 @@ Supabase's own platform variables are managed by Supabase and are not applicatio
 
 ## 13. Local development
 
-Prerequisites: Node.js 22.12.x (the CI baseline) or Node.js 24+, pnpm 11.7, Git, and Docker Desktop for local Supabase/database tests. Node 23 is excluded because the locked test toolchain does not support it. The Supabase CLI and Playwright are project dev dependencies.
+Prerequisites: Node.js 24.14.x (the CI baseline) or a newer supported Node.js 24 release, pnpm 11.7, Git, and Docker Desktop for local Supabase/database tests. Node 23 is excluded because the locked test toolchain does not support it. The Supabase CLI and Playwright are project dev dependencies.
 
 ```powershell
 pnpm install
@@ -624,3 +624,4 @@ High-risk scheduling tests must include DST boundaries, Sunday/Thursday/Friday t
 
 - **2026-07-11 — Phase 1 foundation:** Created the Next.js/TypeScript/Tailwind/shadcn project, Supabase SSR email/password auth, protected responsive shell, centralized validation/i18n/date/domain contracts, normalized 25-table schema, RLS/grants, ownership and overlap triggers, calendar view, private export bucket, test infrastructure, CI, environment example, and repository instructions.
 - **2026-07-13 — Phase 1 alignment and documentation:** Hardened same-origin redirects, canonical confirmation origins, cookie-write failures, and sign-out/confirmation behavior; aligned mission occurrence/session/completion domain contracts with persistence; standardized half-open work-week boundaries and rejected DST ambiguity, skipped midnights, and nonexistent civil dates; centralized all visible Phase 1 English/Hebrew copy and derived document direction from the default locale; enforced split feasibility, status/provenance/completion guards, history retention, and completion reschedule snapshots in PostgreSQL; expanded auth, redirect, browser, and database/RLS verification; documented the implemented foundation and planned Phase 2–8 architecture in this guide.
+- **2026-07-13 — CI runtime alignment:** Updated GitHub Actions to Node.js 24.14.0 so pnpm 11.7 runs on the same supported runtime used for local validation.
