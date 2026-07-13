@@ -568,15 +568,15 @@ select is(
   'completion records snapshot the occurrence reschedule count'
 );
 
+update public.mission_completion_records
+set reschedule_count_at_completion = 99
+where id = '00000000-0000-4000-8000-000000000601';
+
 select is(
   (
-    with changed as (
-      update public.mission_completion_records
-      set reschedule_count_at_completion = 99
-      where id = '00000000-0000-4000-8000-000000000601'
-      returning reschedule_count_at_completion
-    )
-    select reschedule_count_at_completion from changed
+    select reschedule_count_at_completion
+    from public.mission_completion_records
+    where id = '00000000-0000-4000-8000-000000000601'
   ),
   2,
   'completion reschedule snapshots remain immutable'
