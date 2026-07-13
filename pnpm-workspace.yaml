@@ -1,0 +1,12 @@
+packages:
+  - .
+
+confirmModulesPurge: false
+childConcurrency: 1
+
+# pnpm 11 blocks dependency lifecycle scripts by default. These two reviewed
+# native build steps are required by Next.js image handling and ESLint module
+# resolution; every other dependency remains blocked unless explicitly added.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
