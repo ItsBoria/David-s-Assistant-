@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { AcceptPlanButton } from "@/components/my-week/accept-plan-button";
 import { DEFAULT_LOCALE, t } from "@/lib/i18n";
 import { DateOverrideKind } from "@/lib/domain/work-schedule";
 import type { MyWeekDay, MyWeekReadModel } from "@/lib/my-week/read-model";
@@ -75,26 +76,60 @@ function PlanPreview({ preview }: { preview: MyWeekPlanPreview }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-5 p-4 sm:p-6">
-        {preview.scheduled.length > 0 ? (
-          <ol className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {preview.scheduled.map((session) => (
-              <li
-                className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
-                key={`${session.missionId}:${session.sessionIndex}`}
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">
-                  {formatLocalDate(session.localDate)} ·{" "}
-                  {formatInstantTime(session.startsAt, preview.timeZone)}–
-                  {formatInstantTime(session.endsAt, preview.timeZone)}
-                </p>
-                <p className="mt-2 text-sm font-semibold">{session.title}</p>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--muted)]/30 p-4 text-sm text-[var(--muted-foreground)]">
-            {t(DEFAULT_LOCALE, "myWeek.plan.empty")}
+        {preview.savedSessions.length > 0 ? (
+          <div>
+            <h3 className="text-sm font-semibold">
+              {t(DEFAULT_LOCALE, "myWeek.plan.savedTitle")}
+            </h3>
+            <ol className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {preview.savedSessions.map((session) => (
+                <li
+                  className="rounded-xl border border-[var(--success)]/25 bg-[var(--success-soft)] p-4"
+                  key={session.id}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--success)]">
+                    {formatLocalDate(session.localDate)} ·{" "}
+                    {formatInstantTime(session.startsAt, preview.timeZone)}–
+                    {formatInstantTime(session.endsAt, preview.timeZone)}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold">{session.title}</p>
+                </li>
+              ))}
+            </ol>
           </div>
+        ) : null}
+
+        {preview.scheduled.length > 0 ? (
+          <div className="space-y-4">
+            <ol className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {preview.scheduled.map((session) => (
+                <li
+                  className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+                  key={`${session.missionId}:${session.sessionIndex}`}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">
+                    {formatLocalDate(session.localDate)} ·{" "}
+                    {formatInstantTime(session.startsAt, preview.timeZone)}–
+                    {formatInstantTime(session.endsAt, preview.timeZone)}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold">{session.title}</p>
+                </li>
+              ))}
+            </ol>
+            <AcceptPlanButton
+              expectedPlan={preview.scheduled.map((session) => ({
+                endsAt: session.endsAt,
+                missionId: session.missionId,
+                startsAt: session.startsAt,
+              }))}
+            />
+          </div>
+        ) : (
+          preview.savedSessions.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--muted)]/30 p-4 text-sm text-[var(--muted-foreground)]">
+              {t(DEFAULT_LOCALE, "myWeek.plan.empty")}
+            </div>
+          ) : null
         )}
 
         {preview.unscheduled.length > 0 ? (

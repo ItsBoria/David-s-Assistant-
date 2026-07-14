@@ -58,10 +58,13 @@ describe("My Week plan preview", () => {
     const result = buildMyWeekPlanPreview({
       blockers: [
         {
+          domainId: "meeting-1",
           endsAt: "2026-07-19T07:00:00.000Z",
           id: "meeting-1",
           kind: BlockingPeriodKind.MEETING,
           startsAt: "2026-07-19T06:30:00.000Z",
+          status: "planned",
+          title: "Client meeting",
         },
       ],
       now: new Date("2026-07-19T05:00:00.000Z"),
@@ -92,6 +95,24 @@ describe("My Week plan preview", () => {
     expect(result.scheduled[0]?.startsAt).toBe("2026-07-19T06:20:00.000Z");
   });
 
+  it("rounds an in-progress work window to a stable five-minute boundary", () => {
+    const first = buildMyWeekPlanPreview({
+      blockers: [],
+      now: new Date("2026-07-19T06:20:14.000Z"),
+      settings: { ...settings, bufferAfterMinutes: 0, bufferBeforeMinutes: 0 },
+      week: week([mission("stable")]),
+    });
+    const second = buildMyWeekPlanPreview({
+      blockers: [],
+      now: new Date("2026-07-19T06:24:59.000Z"),
+      settings: { ...settings, bufferAfterMinutes: 0, bufferBeforeMinutes: 0 },
+      week: week([mission("stable")]),
+    });
+
+    expect(first.scheduled[0]?.startsAt).toBe("2026-07-19T06:25:00.000Z");
+    expect(second.scheduled).toEqual(first.scheduled);
+  });
+
   it("surfaces the daily limit instead of silently dropping a mission", () => {
     const result = buildMyWeekPlanPreview({
       blockers: [],
@@ -112,10 +133,13 @@ describe("My Week plan preview", () => {
     const result = buildMyWeekPlanPreview({
       blockers: [
         {
+          domainId: "meeting-1",
           endsAt: "2026-07-19T07:00:00.000Z",
           id: "meeting-1",
           kind: BlockingPeriodKind.MEETING,
           startsAt: "2026-07-19T06:00:00.000Z",
+          status: "planned",
+          title: "Client meeting",
         },
       ],
       now: new Date("2026-07-19T05:00:00.000Z"),
@@ -131,5 +155,35 @@ describe("My Week plan preview", () => {
     expect(result.unscheduled[0]?.reason).toBe(
       UnscheduledReason.MAXIMUM_DAILY_MISSION_MINUTES_REACHED,
     );
+  });
+
+  it("returns already persisted mission sessions for the saved schedule", () => {
+    const result = buildMyWeekPlanPreview({
+      blockers: [
+        {
+          domainId: "mission-saved",
+          endsAt: "2026-07-19T07:00:00.000Z",
+          id: "session-saved",
+          kind: BlockingPeriodKind.LOCKED_MISSION,
+          startsAt: "2026-07-19T06:00:00.000Z",
+          status: "planned",
+          title: "Saved mission",
+        },
+      ],
+      now: new Date("2026-07-19T05:00:00.000Z"),
+      settings,
+      week: week([]),
+    });
+
+    expect(result.savedSessions).toEqual([
+      {
+        endsAt: "2026-07-19T07:00:00.000Z",
+        id: "session-saved",
+        localDate: "2026-07-19",
+        missionId: "mission-saved",
+        startsAt: "2026-07-19T06:00:00.000Z",
+        title: "Saved mission",
+      },
+    ]);
   });
 });
