@@ -13,6 +13,14 @@ export interface WorkPeriod {
   endsAt: LocalTime;
 }
 
+export const DateOverrideKind = {
+  CUSTOM_HOURS: "custom_hours",
+  DAY_OFF: "day_off",
+} as const;
+
+export type DateOverrideKind =
+  (typeof DateOverrideKind)[keyof typeof DateOverrideKind];
+
 export interface WeeklyWorkSchedule extends OwnedEntity {
   timezone: string;
   periodsByWeekday: Readonly<Partial<Record<Weekday, readonly WorkPeriod[]>>>;
@@ -28,12 +36,12 @@ interface ScheduleOverrideBase extends OwnedEntity {
 }
 
 export interface DayOffScheduleOverride extends ScheduleOverrideBase {
-  kind: "day_off";
+  kind: typeof DateOverrideKind.DAY_OFF;
   periods: readonly [];
 }
 
 export interface CustomHoursScheduleOverride extends ScheduleOverrideBase {
-  kind: "custom_hours";
+  kind: typeof DateOverrideKind.CUSTOM_HOURS;
   periods: readonly WorkPeriod[];
 }
 

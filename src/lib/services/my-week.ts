@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getWorkWeek } from "@/lib/dates/work-week";
 import type { UserId } from "@/lib/domain/shared";
 import { buildMyWeekReadModel, type MyWeekReadModel } from "@/lib/my-week/read-model";
+import { listDateScheduleOverridesInRange } from "@/lib/repositories/date-overrides";
 import { listSelectedDateMissionsInRange } from "@/lib/repositories/missions";
 import { getActiveWorkHours } from "@/lib/repositories/work-hours";
 
@@ -23,9 +24,15 @@ export async function getMyWeekReadModel({
 }: MyWeekServiceContext): Promise<MyWeekReadModel> {
   const timeZone = DEFAULT_TIME_ZONE;
   const week = getWorkWeek(now, timeZone);
-  const [workHours, missions] = await Promise.all([
+  const [workHours, missions, overrides] = await Promise.all([
     getActiveWorkHours(supabase, ownerId),
     listSelectedDateMissionsInRange(
+      supabase,
+      ownerId,
+      week[0].localDate,
+      week[4].localDate,
+    ),
+    listDateScheduleOverridesInRange(
       supabase,
       ownerId,
       week[0].localDate,
@@ -35,6 +42,7 @@ export async function getMyWeekReadModel({
 
   return buildMyWeekReadModel({
     missions,
+    overrides,
     timeZone,
     week,
     workHours: workHours.days,

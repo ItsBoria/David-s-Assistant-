@@ -164,6 +164,11 @@ const en = {
   "validation.workHours.time.invalid": "Enter a valid time.",
   "validation.workHours.time.order": "End time must be after start time.",
   "validation.workHours.day.required": "Choose valid work-week days.",
+  "validation.dateOverride.date.required": "Choose an override date.",
+  "validation.dateOverride.date.invalid": "Choose a valid override date.",
+  "validation.dateOverride.kind.invalid": "Choose a valid override type.",
+  "validation.dateOverride.reason.tooLong":
+    "Reason must contain at most 500 characters.",
   "weekday.sunday": "Sunday",
   "weekday.monday": "Monday",
   "weekday.tuesday": "Tuesday",
@@ -196,6 +201,8 @@ const en = {
   "myWeek.summaryDescription":
     "{{count}} inbox missions currently target this work week.",
   "myWeek.workHours": "{{startsAt}}–{{endsAt}}",
+  "myWeek.customHours": "Custom {{startsAt}}–{{endsAt}}",
+  "myWeek.dayOff": "Day off",
   "myWeek.noWorkHours": "No hours",
   "myWeek.noMissions": "No targeted missions for this day yet.",
   "myWeek.missionDuration": "{{minutes}} min",
@@ -217,6 +224,33 @@ const en = {
   "settings.workHours.authRequired": "Sign in again before saving settings.",
   "settings.workHours.validationSummary":
     "Check the highlighted work-hour fields and try again.",
+  "settings.dateOverrides.title": "Date-specific hours",
+  "settings.dateOverrides.description":
+    "Replace your normal hours for one date, or mark the whole date off.",
+  "settings.dateOverrides.date": "Date",
+  "settings.dateOverrides.kind": "Override type",
+  "settings.dateOverrides.dayOff": "Day off",
+  "settings.dateOverrides.customHours": "Custom work hours",
+  "settings.dateOverrides.customHoursSummary": "{{startsAt}}–{{endsAt}}",
+  "settings.dateOverrides.reason": "Reason",
+  "settings.dateOverrides.reasonPlaceholder":
+    "Optional, e.g. appointment or company holiday",
+  "settings.dateOverrides.save": "Save date override",
+  "settings.dateOverrides.saving": "Saving override...",
+  "settings.dateOverrides.saved": "Date override saved.",
+  "settings.dateOverrides.unavailable":
+    "Date overrides are temporarily unavailable. Apply the latest Supabase migration, then try again.",
+  "settings.dateOverrides.authRequired":
+    "Sign in again before saving a date override.",
+  "settings.dateOverrides.validationSummary":
+    "Check the highlighted date-override fields and try again.",
+  "settings.dateOverrides.savedTitle": "Saved overrides",
+  "settings.dateOverrides.remove": "Remove",
+  "settings.dateOverrides.removeConfirm": "Remove this override?",
+  "settings.dateOverrides.removed": "Date override removed.",
+  "settings.dateOverrides.removeUnavailable":
+    "The date override could not be removed. Please try again.",
+  "settings.dateOverrides.empty": "No date-specific overrides yet.",
   "errors.notFound": "The requested item could not be found.",
   "errors.forbidden": "You do not have permission to do that.",
   "errors.generic": "Something went wrong. Please try again.",
@@ -387,6 +421,11 @@ const he = {
   "validation.workHours.time.invalid": "Enter a valid time.",
   "validation.workHours.time.order": "End time must be after start time.",
   "validation.workHours.day.required": "Choose valid work-week days.",
+  "validation.dateOverride.date.required": "Choose an override date.",
+  "validation.dateOverride.date.invalid": "Choose a valid override date.",
+  "validation.dateOverride.kind.invalid": "Choose a valid override type.",
+  "validation.dateOverride.reason.tooLong":
+    "Reason must contain at most 500 characters.",
   "weekday.sunday": "יום ראשון",
   "weekday.monday": "יום שני",
   "weekday.tuesday": "יום שלישי",
@@ -419,6 +458,8 @@ const he = {
   "myWeek.summaryDescription":
     "{{count}} inbox missions currently target this work week.",
   "myWeek.workHours": "{{startsAt}}–{{endsAt}}",
+  "myWeek.customHours": "Custom {{startsAt}}–{{endsAt}}",
+  "myWeek.dayOff": "Day off",
   "myWeek.noWorkHours": "No hours",
   "myWeek.noMissions": "No targeted missions for this day yet.",
   "myWeek.missionDuration": "{{minutes}} min",
@@ -440,6 +481,33 @@ const he = {
   "settings.workHours.authRequired": "Sign in again before saving settings.",
   "settings.workHours.validationSummary":
     "Check the highlighted work-hour fields and try again.",
+  "settings.dateOverrides.title": "Date-specific hours",
+  "settings.dateOverrides.description":
+    "Replace your normal hours for one date, or mark the whole date off.",
+  "settings.dateOverrides.date": "Date",
+  "settings.dateOverrides.kind": "Override type",
+  "settings.dateOverrides.dayOff": "Day off",
+  "settings.dateOverrides.customHours": "Custom work hours",
+  "settings.dateOverrides.customHoursSummary": "{{startsAt}}–{{endsAt}}",
+  "settings.dateOverrides.reason": "Reason",
+  "settings.dateOverrides.reasonPlaceholder":
+    "Optional, e.g. appointment or company holiday",
+  "settings.dateOverrides.save": "Save date override",
+  "settings.dateOverrides.saving": "Saving override...",
+  "settings.dateOverrides.saved": "Date override saved.",
+  "settings.dateOverrides.unavailable":
+    "Date overrides are temporarily unavailable. Apply the latest Supabase migration, then try again.",
+  "settings.dateOverrides.authRequired":
+    "Sign in again before saving a date override.",
+  "settings.dateOverrides.validationSummary":
+    "Check the highlighted date-override fields and try again.",
+  "settings.dateOverrides.savedTitle": "Saved overrides",
+  "settings.dateOverrides.remove": "Remove",
+  "settings.dateOverrides.removeConfirm": "Remove this override?",
+  "settings.dateOverrides.removed": "Date override removed.",
+  "settings.dateOverrides.removeUnavailable":
+    "The date override could not be removed. Please try again.",
+  "settings.dateOverrides.empty": "No date-specific overrides yet.",
   "errors.notFound": "הפריט המבוקש לא נמצא.",
   "errors.forbidden": "אין לכם הרשאה לבצע פעולה זו.",
   "errors.generic": "משהו השתבש. נסו שוב.",
