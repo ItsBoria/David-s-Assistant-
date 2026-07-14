@@ -43,6 +43,7 @@ insert into auth.users (
   now(),
   '',
   '',
+  '',
   ''
 ),
 (
