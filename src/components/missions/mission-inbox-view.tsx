@@ -1,6 +1,7 @@
 import { AlertCircle, CalendarDays, Clock3, Inbox } from "lucide-react";
 
 import { MissionCreateForm } from "@/components/missions/mission-create-form";
+import { MissionItemActions } from "@/components/missions/mission-item-actions";
 import {
   Card,
   CardContent,
@@ -85,6 +86,7 @@ function MissionCard({ mission }: { mission: MissionInboxItem }) {
           </span>
         </div>
       </div>
+      <MissionItemActions mission={mission} />
     </li>
   );
 }

@@ -46,6 +46,10 @@ export type CreateSelectedDateMissionRecord = {
   category: string | null;
 };
 
+export type UpdateSelectedDateMissionRecord = CreateSelectedDateMissionRecord & {
+  id: EntityId;
+};
+
 function mapInboxRow(row: MissionInboxRow): MissionInboxItem {
   return {
     id: row.id,
@@ -89,6 +93,60 @@ export async function createSelectedDateMission(
   }
 
   return mapInboxRow(data);
+}
+
+export async function updateSelectedDateMission(
+  supabase: SupabaseClient,
+  mission: UpdateSelectedDateMissionRecord,
+): Promise<MissionInboxItem> {
+  const { data, error } = await supabase
+    .from("missions")
+    .update({
+      title: mission.title,
+      description: mission.description,
+      priority: mission.priority,
+      estimated_duration_minutes: mission.estimatedDurationMinutes,
+      selected_date: mission.selectedDate,
+      category: mission.category,
+    })
+    .eq("id", mission.id)
+    .eq("owner_id", mission.ownerId)
+    .eq("status", MissionStatus.UNSCHEDULED)
+    .eq("scheduling_mode", SchedulingMode.SELECTED_DATE)
+    .select(
+      "id,title,description,priority,status,estimated_duration_minutes,selected_date,category,created_at,updated_at",
+    )
+    .single<MissionInboxRow>();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapInboxRow(data);
+}
+
+export async function cancelSelectedDateMission(
+  supabase: SupabaseClient,
+  ownerId: UserId,
+  missionId: EntityId,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("missions")
+    .update({ status: MissionStatus.CANCELLED })
+    .eq("id", missionId)
+    .eq("owner_id", ownerId)
+    .eq("status", MissionStatus.UNSCHEDULED)
+    .eq("scheduling_mode", SchedulingMode.SELECTED_DATE)
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error("Mission was not found or is no longer editable.");
+  }
 }
 
 export async function listMissionInboxItems(
