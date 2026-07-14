@@ -210,6 +210,17 @@ const en = {
   "myWeek.plan.description":
     "A deterministic preview using your effective hours, workload limit, buffers, and existing calendar blocks.",
   "myWeek.plan.previewOnly": "Preview only · nothing saved",
+  "myWeek.plan.savedTitle": "Saved schedule",
+  "myWeek.plan.accept": "Save suggested plan",
+  "myWeek.plan.accepting": "Saving plan…",
+  "myWeek.plan.accepted": "{{count}} mission sessions saved to your week.",
+  "myWeek.plan.nothingToAccept":
+    "The preview changed and there is nothing left to save. Reload and review it again.",
+  "myWeek.plan.previewChanged":
+    "The plan changed since you reviewed it. Reload and check the new times before saving.",
+  "myWeek.plan.acceptUnavailable":
+    "The plan could not be saved safely. Apply the latest Supabase migration, reload, and try again.",
+  "myWeek.plan.authRequired": "Sign in again before saving a plan.",
   "myWeek.plan.empty":
     "Add an inbox mission on a workday with available hours to see a suggested time.",
   "myWeek.plan.unscheduledTitle": "Missions that need attention",
@@ -483,6 +494,17 @@ const he = {
   "myWeek.plan.description":
     "A deterministic preview using your effective hours, workload limit, buffers, and existing calendar blocks.",
   "myWeek.plan.previewOnly": "Preview only · nothing saved",
+  "myWeek.plan.savedTitle": "Saved schedule",
+  "myWeek.plan.accept": "Save suggested plan",
+  "myWeek.plan.accepting": "Saving plan…",
+  "myWeek.plan.accepted": "{{count}} mission sessions saved to your week.",
+  "myWeek.plan.nothingToAccept":
+    "The preview changed and there is nothing left to save. Reload and review it again.",
+  "myWeek.plan.previewChanged":
+    "The plan changed since you reviewed it. Reload and check the new times before saving.",
+  "myWeek.plan.acceptUnavailable":
+    "The plan could not be saved safely. Apply the latest Supabase migration, reload, and try again.",
+  "myWeek.plan.authRequired": "Sign in again before saving a plan.",
   "myWeek.plan.empty":
     "Add an inbox mission on a workday with available hours to see a suggested time.",
   "myWeek.plan.unscheduledTitle": "Missions that need attention",

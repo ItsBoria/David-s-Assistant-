@@ -23,11 +23,13 @@ type PreferencesRow = {
 };
 
 type CalendarItemRow = {
+  domain_id: string;
   ends_at: string;
   item_id: string;
   item_type: "meeting" | "mission" | "unavailable";
   starts_at: string;
   status: string;
+  title: string;
 };
 
 const DEFAULT_SETTINGS: Omit<PlanningSettings, "timeZone"> = {
@@ -85,7 +87,7 @@ export async function listPlanningBlockers(
 ): Promise<PlanningBlocker[]> {
   const { data, error } = await supabase
     .from("calendar_items")
-    .select("item_id,item_type,starts_at,ends_at,status")
+    .select("item_id,item_type,domain_id,title,starts_at,ends_at,status")
     .eq("owner_id", ownerId)
     .lt("starts_at", endsBefore)
     .gt("ends_at", startsAt)
@@ -99,10 +101,13 @@ export async function listPlanningBlockers(
   return data
     .filter((row) => row.status !== "cancelled" && row.status !== "postponed")
     .map((row) => ({
+      domainId: row.domain_id,
       endsAt: row.ends_at,
       id: row.item_id,
       kind: mapBlockerKind(row.item_type),
       startsAt: row.starts_at,
+      status: row.status,
+      title: row.title,
     }));
 }
 

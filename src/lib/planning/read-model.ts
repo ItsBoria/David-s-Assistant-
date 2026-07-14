@@ -1,7 +1,7 @@
 import { fromLocalDateTime, toLocalDate } from "@/lib/dates";
 import type { MissionPriority } from "@/lib/domain/mission";
 import { SchedulingMode } from "@/lib/domain/mission";
-import type { LocalDate, UtcIsoDateTime } from "@/lib/domain/shared";
+import type { EntityId, LocalDate, UtcIsoDateTime } from "@/lib/domain/shared";
 import type { MyWeekReadModel } from "@/lib/my-week/read-model";
 import {
   BlockingPeriodKind,
@@ -18,10 +18,22 @@ export type PlanningSettings = {
 };
 
 export type PlanningBlocker = {
+  domainId: EntityId;
   endsAt: UtcIsoDateTime;
   id: string;
   kind: BlockingPeriodKindValue;
   startsAt: UtcIsoDateTime;
+  status: string;
+  title: string;
+};
+
+export type SavedPlanSession = {
+  endsAt: UtcIsoDateTime;
+  id: EntityId;
+  localDate: LocalDate;
+  missionId: EntityId;
+  startsAt: UtcIsoDateTime;
+  title: string;
 };
 
 export type PlanPreviewSession = {
@@ -41,10 +53,18 @@ export type PlanPreviewUnscheduledMission = {
 };
 
 export type MyWeekPlanPreview = {
+  savedSessions: SavedPlanSession[];
   scheduled: PlanPreviewSession[];
   timeZone: string;
   unscheduled: PlanPreviewUnscheduledMission[];
 };
+
+const PLANNING_INCREMENT_MINUTES = 5;
+
+function ceilToPlanningIncrement(instantMs: number): number {
+  const incrementMs = PLANNING_INCREMENT_MINUTES * 60_000;
+  return Math.ceil(instantMs / incrementMs) * incrementMs;
+}
 
 export function buildMyWeekPlanPreview({
   blockers,
@@ -61,6 +81,7 @@ export function buildMyWeekPlanPreview({
   if (!Number.isFinite(nowMs)) {
     throw new RangeError("Plan preview requires a valid current instant");
   }
+  const planningStartMs = ceilToPlanningIncrement(nowMs);
 
   const workWindows = week.days.flatMap((day) => {
     if (!day.workHours.enabled) {
@@ -77,7 +98,7 @@ export function buildMyWeekPlanPreview({
       day.workHours.endsAt,
       settings.timeZone,
     );
-    const effectiveStartMs = Math.max(startsAt.getTime(), nowMs);
+    const effectiveStartMs = Math.max(startsAt.getTime(), planningStartMs);
 
     if (effectiveStartMs >= endsAt.getTime()) {
       return [];
@@ -148,6 +169,16 @@ export function buildMyWeekPlanPreview({
   });
 
   return {
+    savedSessions: blockers
+      .filter((blocker) => blocker.kind === BlockingPeriodKind.LOCKED_MISSION)
+      .map((blocker) => ({
+        endsAt: blocker.endsAt,
+        id: blocker.id,
+        localDate: toLocalDate(blocker.startsAt, settings.timeZone),
+        missionId: blocker.domainId,
+        startsAt: blocker.startsAt,
+        title: blocker.title,
+      })),
     scheduled: result.scheduled.flatMap((mission) => {
       const source = missionsById.get(mission.missionId);
       if (!source) {
