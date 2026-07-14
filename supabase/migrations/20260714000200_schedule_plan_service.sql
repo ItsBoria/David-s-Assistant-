@@ -63,7 +63,7 @@ begin
     raise exception 'planning preferences are unavailable' using errcode = 'P0002';
   end if;
 
-  v_mission_gap := pg_catalog.greatest(v_buffer_before, v_buffer_after);
+  v_mission_gap := greatest(v_buffer_before, v_buffer_after);
 
   begin
     if exists (
@@ -131,7 +131,7 @@ begin
     end if;
 
     if v_assignment.ends_at <= v_assignment.starts_at
-      or pg_catalog.extract(epoch from (v_assignment.ends_at - v_assignment.starts_at))
+      or extract(epoch from (v_assignment.ends_at - v_assignment.starts_at))
         <> v_mission.estimated_duration_minutes * 60 then
       raise exception 'assignment duration does not match the mission estimate'
         using errcode = '22023';
@@ -201,7 +201,7 @@ begin
           and schedule.is_active
           and schedule.effective_from <= v_local_date
           and (schedule.effective_until is null or schedule.effective_until >= v_local_date)
-          and period.weekday = pg_catalog.extract(dow from v_local_date)::smallint
+          and period.weekday = extract(dow from v_local_date)::smallint
           and period.period_kind = 'work'
           and period.starts_at <= v_local_start::time
           and period.ends_at >= v_local_end::time
@@ -220,7 +220,7 @@ begin
           and schedule.is_active
           and schedule.effective_from <= v_local_date
           and (schedule.effective_until is null or schedule.effective_until >= v_local_date)
-          and period.weekday = pg_catalog.extract(dow from v_local_date)::smallint
+          and period.weekday = extract(dow from v_local_date)::smallint
           and period.period_kind = 'break'
           and period.starts_at < v_local_end::time
           and period.ends_at > v_local_start::time
@@ -296,9 +296,9 @@ begin
     from pg_catalog.jsonb_to_recordset(p_assignments)
       as assignment(mission_id uuid, starts_at timestamptz, ends_at timestamptz)
   loop
-    select pg_catalog.coalesce(
+    select coalesce(
       pg_catalog.sum(
-        pg_catalog.extract(epoch from (assignment.ends_at - assignment.starts_at)) / 60
+        extract(epoch from (assignment.ends_at - assignment.starts_at)) / 60
       ),
       0
     )
@@ -307,11 +307,11 @@ begin
       as assignment(mission_id uuid, starts_at timestamptz, ends_at timestamptz)
     where (assignment.starts_at at time zone v_time_zone)::date = v_local_date;
 
-    select pg_catalog.coalesce(pg_catalog.sum(item.minutes), 0)
+    select coalesce(pg_catalog.sum(item.minutes), 0)
       into v_existing_minutes
     from (
       select pg_catalog.ceil(
-        pg_catalog.extract(epoch from (meeting.ends_at - meeting.starts_at)) / 60
+        extract(epoch from (meeting.ends_at - meeting.starts_at)) / 60
       ) as minutes
       from public.meetings as meeting
       where meeting.owner_id = v_owner_id
@@ -319,7 +319,7 @@ begin
         and (meeting.starts_at at time zone v_time_zone)::date = v_local_date
       union all
       select pg_catalog.ceil(
-        pg_catalog.extract(epoch from (session.ends_at - session.starts_at)) / 60
+        extract(epoch from (session.ends_at - session.starts_at)) / 60
       ) as minutes
       from public.mission_sessions as session
       where session.owner_id = v_owner_id
