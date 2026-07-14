@@ -1,4 +1,4 @@
-import { CalendarDays, Clock3, Inbox } from "lucide-react";
+import { AlertTriangle, CalendarDays, Clock3, Inbox, Sparkles } from "lucide-react";
 
 import {
   Card,
@@ -10,6 +10,8 @@ import {
 import { DEFAULT_LOCALE, t } from "@/lib/i18n";
 import { DateOverrideKind } from "@/lib/domain/work-schedule";
 import type { MyWeekDay, MyWeekReadModel } from "@/lib/my-week/read-model";
+import type { MyWeekPlanPreview } from "@/lib/planning/read-model";
+import { UnscheduledReason } from "@/lib/scheduling";
 
 const weekdayLabels = {
   0: "weekday.sunday",
@@ -25,6 +27,101 @@ function formatLocalDate(value: string) {
     day: "numeric",
     month: "short",
   }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function formatInstantTime(value: string, timeZone: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    timeZone,
+  }).format(new Date(value));
+}
+
+const unscheduledReasonLabels = {
+  [UnscheduledReason.DEADLINE_PASSED]: "myWeek.plan.reason.deadlinePassed",
+  [UnscheduledReason.NO_ALLOWED_DAY]: "myWeek.plan.reason.noAllowedDay",
+  [UnscheduledReason.NO_AVAILABLE_WORK_HOURS]:
+    "myWeek.plan.reason.noAvailableHours",
+  [UnscheduledReason.FIXED_TIME_CONFLICT]:
+    "myWeek.plan.reason.fixedConflict",
+  [UnscheduledReason.DURATION_CANNOT_FIT]:
+    "myWeek.plan.reason.durationCannotFit",
+  [UnscheduledReason.MINIMUM_SESSION_DURATION_CANNOT_FIT]:
+    "myWeek.plan.reason.minimumSessionCannotFit",
+  [UnscheduledReason.MAXIMUM_DAILY_MISSION_MINUTES_REACHED]:
+    "myWeek.plan.reason.dailyLimitReached",
+  [UnscheduledReason.LOCKED_MISSION_HAS_NO_PRESERVED_SESSION]:
+    "myWeek.plan.reason.lockedMission",
+} as const;
+
+function PlanPreview({ preview }: { preview: MyWeekPlanPreview }) {
+  return (
+    <Card className="overflow-hidden border-[var(--primary)]/25">
+      <CardHeader className="border-b border-[var(--border)] bg-[var(--primary-soft)]/55">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="mb-3 grid size-11 place-items-center rounded-xl bg-[var(--primary)] text-white">
+              <Sparkles aria-hidden="true" className="size-5" />
+            </div>
+            <CardTitle>{t(DEFAULT_LOCALE, "myWeek.plan.title")}</CardTitle>
+            <CardDescription>
+              {t(DEFAULT_LOCALE, "myWeek.plan.description")}
+            </CardDescription>
+          </div>
+          <span className="rounded-full border border-[var(--primary)]/20 bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
+            {t(DEFAULT_LOCALE, "myWeek.plan.previewOnly")}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5 p-4 sm:p-6">
+        {preview.scheduled.length > 0 ? (
+          <ol className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {preview.scheduled.map((session) => (
+              <li
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+                key={`${session.missionId}:${session.sessionIndex}`}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">
+                  {formatLocalDate(session.localDate)} ·{" "}
+                  {formatInstantTime(session.startsAt, preview.timeZone)}–
+                  {formatInstantTime(session.endsAt, preview.timeZone)}
+                </p>
+                <p className="mt-2 text-sm font-semibold">{session.title}</p>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--muted)]/30 p-4 text-sm text-[var(--muted-foreground)]">
+            {t(DEFAULT_LOCALE, "myWeek.plan.empty")}
+          </div>
+        )}
+
+        {preview.unscheduled.length > 0 ? (
+          <div className="rounded-xl border border-[var(--destructive)]/25 bg-[var(--destructive-soft)] p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <AlertTriangle
+                aria-hidden="true"
+                className="size-4 text-[var(--destructive)]"
+              />
+              {t(DEFAULT_LOCALE, "myWeek.plan.unscheduledTitle")}
+            </div>
+            <ul className="mt-3 space-y-2">
+              {preview.unscheduled.map((mission) => (
+                <li className="text-sm" key={mission.missionId}>
+                  <span className="font-medium">{mission.title}</span>
+                  <span className="text-[var(--muted-foreground)]">
+                    {" — "}
+                    {t(DEFAULT_LOCALE, unscheduledReasonLabels[mission.reason])}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
 }
 
 function WorkHoursBadge({ day }: { day: MyWeekDay }) {
@@ -109,7 +206,13 @@ function WeekDayCard({ day }: { day: MyWeekDay }) {
   );
 }
 
-export function MyWeekView({ week }: { week: MyWeekReadModel }) {
+export function MyWeekView({
+  planPreview,
+  week,
+}: {
+  planPreview: MyWeekPlanPreview;
+  week: MyWeekReadModel;
+}) {
   const missionCount = week.days.reduce(
     (total, day) => total + day.missions.length,
     0,
@@ -149,6 +252,8 @@ export function MyWeekView({ week }: { week: MyWeekReadModel }) {
           </CardDescription>
         </CardHeader>
       </Card>
+
+      <PlanPreview preview={planPreview} />
 
       <div className="grid gap-4 xl:grid-cols-5">
         {week.days.map((day) => (

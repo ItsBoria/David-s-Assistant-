@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { appNavigation } from "@/components/app-shell/config";
 import { MyWeekView } from "@/components/my-week/my-week-view";
-import { getMyWeekReadModel } from "@/lib/services/my-week";
+import { getMyWeekWorkspace } from "@/lib/services/my-week";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: appNavigation[0].label };
@@ -17,7 +17,9 @@ export default async function MyWeekPage() {
     redirect("/login?next=/app");
   }
 
-  const week = await getMyWeekReadModel({ ownerId, supabase });
+  const workspace = await getMyWeekWorkspace({ ownerId, supabase });
 
-  return <MyWeekView week={week} />;
+  return (
+    <MyWeekView planPreview={workspace.planPreview} week={workspace.week} />
+  );
 }
