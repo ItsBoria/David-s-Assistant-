@@ -50,6 +50,16 @@ const en = {
   "mission.inbox.submit": "Add mission",
   "mission.inbox.submitting": "Adding mission…",
   "mission.inbox.created": "Mission added to your inbox.",
+  "mission.inbox.updated": "Mission changes saved.",
+  "mission.inbox.updateUnavailable":
+    "Mission changes could not be saved. Please try again.",
+  "mission.inbox.cancelMission": "Cancel mission",
+  "mission.inbox.cancelConfirm": "Remove this mission from active planning?",
+  "mission.inbox.confirmCancel": "Yes, cancel it",
+  "mission.inbox.cancelling": "Cancelling...",
+  "mission.inbox.cancelled": "Mission cancelled.",
+  "mission.inbox.cancelUnavailable":
+    "The mission could not be cancelled. Please try again.",
   "mission.inbox.unavailable":
     "Mission creation is temporarily unavailable. Please try again.",
   "mission.inbox.authRequired": "Sign in again before adding a mission.",
@@ -147,6 +157,7 @@ const en = {
   "validation.fullName.tooShort": "Full name must contain at least 2 characters.",
   "validation.fullName.tooLong": "Full name must contain at most 100 characters.",
   "validation.mission.title.required": "Enter a mission title.",
+  "validation.mission.id.invalid": "Choose a valid mission.",
   "validation.mission.title.tooLong":
     "Mission title must contain at most 240 characters.",
   "validation.mission.description.tooLong":
@@ -277,6 +288,16 @@ const he = {
   "mission.inbox.submit": "Add mission",
   "mission.inbox.submitting": "Adding mission…",
   "mission.inbox.created": "Mission added to your inbox.",
+  "mission.inbox.updated": "Mission changes saved.",
+  "mission.inbox.updateUnavailable":
+    "Mission changes could not be saved. Please try again.",
+  "mission.inbox.cancelMission": "Cancel mission",
+  "mission.inbox.cancelConfirm": "Remove this mission from active planning?",
+  "mission.inbox.confirmCancel": "Yes, cancel it",
+  "mission.inbox.cancelling": "Cancelling...",
+  "mission.inbox.cancelled": "Mission cancelled.",
+  "mission.inbox.cancelUnavailable":
+    "The mission could not be cancelled. Please try again.",
   "mission.inbox.unavailable":
     "Mission creation is temporarily unavailable. Please try again.",
   "mission.inbox.authRequired": "Sign in again before adding a mission.",
@@ -370,6 +391,7 @@ const he = {
   "validation.fullName.tooShort": "השם המלא חייב להכיל לפחות 2 תווים.",
   "validation.fullName.tooLong": "השם המלא יכול להכיל עד 100 תווים.",
   "validation.mission.title.required": "Enter a mission title.",
+  "validation.mission.id.invalid": "Choose a valid mission.",
   "validation.mission.title.tooLong":
     "Mission title must contain at most 240 characters.",
   "validation.mission.description.tooLong":

@@ -9,6 +9,7 @@ import { MissionPriority } from "../domain/mission";
 import type { LocalDate } from "../domain/shared";
 
 export const MissionValidationMessage = {
+  ID_INVALID: "validation.mission.id.invalid",
   TITLE_REQUIRED: "validation.mission.title.required",
   TITLE_TOO_LONG: "validation.mission.title.tooLong",
   DESCRIPTION_TOO_LONG: "validation.mission.description.tooLong",
@@ -116,5 +117,19 @@ export const createMissionSchema = z.object({
   selectedDate: localDateSchema,
 });
 
+const missionIdSchema = z
+  .string()
+  .uuid({ message: MissionValidationMessage.ID_INVALID });
+
+export const updateMissionSchema = createMissionSchema.extend({
+  id: missionIdSchema,
+});
+
+export const cancelMissionSchema = z.object({
+  id: missionIdSchema,
+});
+
 export type CreateMissionInput = z.output<typeof createMissionSchema>;
 export type CreateMissionFormValues = z.input<typeof createMissionSchema>;
+export type UpdateMissionInput = z.output<typeof updateMissionSchema>;
+export type UpdateMissionFormValues = z.input<typeof updateMissionSchema>;

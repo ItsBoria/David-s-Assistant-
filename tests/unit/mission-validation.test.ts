@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { MissionPriority } from "../../src/lib/domain/mission";
 import {
+  cancelMissionSchema,
   createMissionSchema,
   MissionValidationMessage,
   localizeMissionValidationMessage,
+  updateMissionSchema,
   zodErrorToFieldErrors,
 } from "../../src/lib/validation";
 
@@ -55,6 +57,31 @@ describe("mission validation", () => {
 
     expect(result.category).toBeNull();
     expect(result.description).toBeNull();
+  });
+
+  it("validates mission identity for edit and cancellation commands", () => {
+    const id = "1af2dcbb-cc53-42a9-9b18-c728b4d88733";
+
+    expect(cancelMissionSchema.parse({ id })).toEqual({ id });
+    expect(
+      updateMissionSchema.parse({
+        category: "Operations",
+        description: null,
+        estimatedDurationMinutes: 45,
+        id,
+        priority: MissionPriority.HIGH,
+        selectedDate: "2026-07-16",
+        title: "Updated mission",
+      }),
+    ).toMatchObject({ id, title: "Updated mission" });
+
+    const invalid = cancelMissionSchema.safeParse({ id: "not-a-mission-id" });
+    expect(invalid.success).toBe(false);
+    if (!invalid.success) {
+      expect(zodErrorToFieldErrors(invalid.error)).toEqual({
+        id: [MissionValidationMessage.ID_INVALID],
+      });
+    }
   });
 
   it("rejects missing essentials with field-level messages", () => {
