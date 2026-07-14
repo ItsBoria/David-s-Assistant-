@@ -1,7 +1,7 @@
 # Codebase Guide
 
 Last updated: 2026-07-14  
-Implementation baseline: Phase 1 plus first Phase 2 mission-inbox, work-hours, and My Week read-model slices
+Implementation baseline: Phase 1, initial Phase 2 app slices, and the Phase 3 pure deterministic planner core
 
 This document is the durable map of David's Work-Week Assistant. Code and ordered Supabase migrations remain authoritative if this guide ever drifts. Every change must update the affected sections, the decision log when a new architectural choice is made, and the change history.
 
@@ -28,8 +28,9 @@ Implemented so far:
 - A first Phase 2 Mission Inbox slice: signed-in users can create selected-date, unscheduled missions through a React Hook Form client backed by a Server Action, a shared Mission service, a Supabase repository, and the existing RLS-protected `missions` table. The inbox lists the user's latest selected-date unscheduled missions from PostgreSQL.
 - A first Phase 2 Settings slice: signed-in users can view and save normal Sunday-to-Thursday work hours through a React Hook Form client backed by a Server Action, shared Work Hours service, Supabase repository, and the existing `weekly_work_schedules` / `work_schedule_periods` tables.
 - A first Phase 2 My Week slice: signed-in users can view the current Sunday-to-Thursday week with saved work hours and selected-date inbox missions grouped by target date. This is a read model, not an automatic scheduler.
+- A pure Phase 3 planner core: validated UTC planning windows and blocking intervals, deterministic mission ranking, deadline/date/weekday eligibility, buffers and daily caps, fixed-time conflict reporting, whole-session placement, feasible splitting, and explicit unscheduled reasons. It does not yet load or save plans.
 
-Phases 2–8 remain planned: work-schedule and mission CRUD, the calendar, deterministic scheduling and rescheduling, recurrence generation, meetings and contacts UI, Telegram and reminder workers, PDF/DOCX generation, and production hardening. The Phase 1 schema anticipates those capabilities; it does not make them operational.
+The remaining Phase 2–8 work is still planned: broader work-schedule and mission CRUD, planner orchestration and persistence, the calendar, rescheduling, recurrence generation, meetings and contacts UI, Telegram and reminder workers, PDF/DOCX generation, and production hardening. The foundation schema and pure planner anticipate those capabilities; they do not make them operational.
 
 Current Phase 2 note: basic selected-date mission capture, Mission Inbox reading, normal weekly work-hours settings, and a read-only My Week dashboard are now operational. The rest of Phase 2 and later phases remain planned.
 
@@ -323,7 +324,7 @@ At TypeScript boundaries, local dates/times remain strings and instants are expl
 
 ## 6. Scheduling engine
 
-**Status: planned for Phase 3.** Phase 1 provides domain contracts, split validation, schedule/mission persistence, indexes, and database overlap protection. It does not calculate availability, score missions, preview a plan, or save assignments.
+**Status: pure core implemented; orchestration, preview UI, persistence, and rescheduling remain planned for Phase 3.** The core accepts work windows already resolved to UTC, subtracts buffered blocking intervals, ranks and places candidates deterministically, and returns scheduled sessions or explicit unscheduled reasons. It has no Supabase dependency and does not mutate data. A later service must resolve weekly schedules/date overrides in the owner's timezone, load meetings/unavailable/locked work, call the core, present a preview, and persist accepted changes transactionally.
 
 ### Planned rules
 
@@ -337,7 +338,7 @@ Availability for a date range will be calculated in the owner's IANA timezone:
 
 Fixed-time missions are validated as fixed placements and never moved automatically. Selected-date missions may use any valid slot on that date. Selected-weekday and selected-date missions are limited to those candidates. Flexible-before-deadline missions must end no later than the deadline; flexible-range missions remain between earliest and latest dates. Expired deadlines and empty eligible date sets produce explicit unscheduled reasons.
 
-The rank must be deterministic and based on explicit rules, not an AI score: fixedness, deadline proximity, priority (`urgent > high > medium > low`), postponement/reschedule history, recurrence context, eligible-day scarcity, duration/fit, and workload/buffer constraints. A stable final tie-breaker such as creation time then mission/occurrence UUID is required. Exact weights/order must be captured in an ADR when Phase 3 implements them.
+The implemented rank is an ordered tuple rather than an AI score. Fixed-time candidates are placed first in start-time order. Flexible candidates sort by: earliest deadline (no deadline last), priority (`urgent > high > medium > low`), higher reschedule count, fewer eligible dates, earlier creation instant, occurrence ID, then mission ID. Placement uses the earliest feasible window, preferring one whole session; splits use the fewest feasible sessions and the largest feasible early part without making the remainder impossible. Workload and buffer constraints filter feasible placements rather than changing rank.
 
 Only missions with a valid split policy may split. Every part must respect minimum/maximum session length, maximum session count, total duration, allowed dates, deadlines, daily caps, and buffers. Meetings never split. If no valid partition exists, return `minimum_session_duration_cannot_fit` rather than silently truncating work.
 
@@ -585,7 +586,7 @@ Rollback success includes restored auth, owner isolation, no duplicate notificat
 
 | Layer | Implemented Phase 1 coverage | Required later |
 | --- | --- | --- |
-| Unit/Vitest | Auth normalization/bounds/errors; mission creation validation; work-hours validation; My Week read-model grouping; mission status transitions and split feasibility; error contract; safe redirects; locale/direction helpers; Sunday-to-Thursday/DST/date validation with half-open bounds. | Priority/deadline scoring, work/override availability, slot subtraction, conflict detection, splitting placements, recurrence, reminder times, report-data preparation. |
+| Unit/Vitest | Auth normalization/bounds/errors; mission creation validation; work-hours validation; My Week read-model grouping; mission status transitions and split feasibility; error contract; safe redirects; locale/direction helpers; Sunday-to-Thursday/DST/date validation; planner interval normalization/subtraction, deterministic deadline/priority/stable ranking, allowed days, buffered blockers, fixed conflicts, caps, whole and split placement, and explicit failure reasons. | Schedule/override-to-UTC availability orchestration, transactional rescheduling, recurrence, reminder times, report-data preparation. |
 | Database/pgTAP | 17 transactional checks: schema/enums/indexes/triggers/grants/RLS structure, bootstrap, two-owner isolation, security-invoker view isolation, feasible/impossible split policies, completion/provenance guards, completion snapshot/identity immutability, physical-delete denial, period-overlap rejection, service-only token denial, anonymous denial, and private bucket. | Service transaction integration, rescheduling, recurrence idempotency, completion/outbox/update idempotency, retry claims, export metadata/storage authorization. |
 | Browser/Playwright | Desktop Chrome and Pixel 7 projects verify the public login form, semantics, validation, and recovery after errors without live credentials. | Real local auth/confirmation and protected shell; mission, plan, meeting, work-hours, completion, Telegram-with-mocks, and export journeys. |
 | CI | Separate quality (`lint`, typecheck, unit, build), Chromium E2E, and Docker-backed Supabase reset/pgTAP jobs. Dependabot covers npm and Actions. | Provider contract tests, Edge Function tests, export visual/content regression, load/concurrency checks, accessibility audit. |
@@ -608,6 +609,7 @@ High-risk scheduling tests must include DST boundaries, Sunday/Thursday/Friday t
 | ADR-008 / 2026-07-11 | Use Supabase email/password confirmation with SSR cookies and verified claims at proxy and layout boundaries. | Trusting cookie session contents alone is insufficient; custom credential storage is unsafe. | Auth depends on correct redirect/email configuration; recovery/invite workflows remain to implement. |
 | ADR-009 / 2026-07-11 | Do not configure cron, Edge Functions, webhook, or fake dashboard-only runtime before executable services exist. | Orphan schedules/endpoints create security and operational drift. | Schema is ready, but later phases must deliver code, migrations/config, tests, and documentation together. |
 | ADR-010 / 2026-07-13 | Allow only reviewed `sharp` and `unrs-resolver` lifecycle builds under pnpm 11. | pnpm's default hardening blocks scripts; these native builds are required for Next image/ESLint tooling. | New install scripts fail until explicitly reviewed and documented. |
+| ADR-011 / 2026-07-14 | Keep planning as a pure deterministic function over UTC-resolved half-open windows, with an explicit rank tuple and machine-readable unscheduled reasons. | Mixing database reads/writes, civil-time conversion, and placement logic would make previews hard to reproduce and failures hard to explain. Weighted or AI scoring would hide ordering changes. | Callers must resolve owner-local schedules before planning and persist only after preview/transactional conflict recheck; identical validated inputs produce identical output. |
 
 ## 17. Known limitations
 
@@ -615,7 +617,7 @@ High-risk scheduling tests must include DST boundaries, Sunday/Thursday/Friday t
 - Mission and Work Hours service/repository implementations exist only for selected-date unscheduled mission creation/listing and one normal work period per Sunday-to-Thursday day. Meeting, Scheduling, Recurrence, Completion, Reminder, Notification, Contact, Telegram, Export, and Audit service implementations do not exist yet.
 - The database permits owner writes for ordinary domain tables, with additional lifecycle guards on missions/occurrences/sessions. The implemented mission workflow routes through shared server-side service/repository modules; future workflows should follow that pattern.
 - No date override, calendar placement, recurrence, meeting, contact, completion, reminder, Telegram, or export end-user workflow exists. My Week is read-only and does not automatically schedule missions into time slots. Mission editing, deletion, completion, recurrence, flexible deadlines, weekday/date-set constraints, fixed-time mission creation, multiple periods per day, breaks, date-specific overrides, and splitting controls are not implemented.
-- The deterministic scheduler, scoring policy, preview/result contract, transaction API, and automatic rescheduling are not implemented.
+- The pure deterministic planner, rank policy, interval subtraction, splitting, caps/buffers, and scheduled/unscheduled result contract are implemented. Supabase loading, owner-timezone availability resolution, preview UI, transactional session writes, moved-session diffs, conflict rechecks, and automatic rescheduling are not implemented.
 - Recurrence rules and occurrence uniqueness exist, but there is no generator or editing-scope transaction.
 - Telegram tables/contracts exist, but there is no bot/webhook/linking/callback/parser/provider worker. No notification provider is active.
 - Reminder/outbox/attempt tables exist, but no cron, queue claimant, retry worker, or provider adapter exists.
@@ -637,3 +639,4 @@ High-risk scheduling tests must include DST boundaries, Sunday/Thursday/Friday t
 - **2026-07-13 — Phase 1 alignment and documentation:** Hardened same-origin redirects, canonical confirmation origins, cookie-write failures, and sign-out/confirmation behavior; aligned mission occurrence/session/completion domain contracts with persistence; standardized half-open work-week boundaries and rejected DST ambiguity, skipped midnights, and nonexistent civil dates; centralized all visible Phase 1 English/Hebrew copy and derived document direction from the default locale; enforced split feasibility, status/provenance/completion guards, history retention, and completion reschedule snapshots in PostgreSQL; expanded auth, redirect, browser, and database/RLS verification; documented the implemented foundation and planned Phase 2–8 architecture in this guide.
 - **2026-07-13 — CI runtime alignment:** Updated GitHub Actions to Node.js 24.14.0 so pnpm 11.7 runs on the same supported runtime used for local validation.
 - **2026-07-13 — Database test portability:** Rewrote pgTAP assertions to avoid nested data-modifying CTEs rejected by PostgreSQL.
+- **2026-07-14 — Deterministic planner core:** Added the pure scheduling input/result contract, validated UTC half-open interval normalization and subtraction, explicit deadline/priority/stable ordering, date and weekday eligibility, buffered blockers, daily mission caps, fixed-time validation, whole and split placement, machine-readable unscheduled reasons, and focused unit coverage. Documented the reproducibility boundary and remaining orchestration/persistence work in ADR-011.
