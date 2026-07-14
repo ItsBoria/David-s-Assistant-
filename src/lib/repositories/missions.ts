@@ -114,6 +114,33 @@ export async function listMissionInboxItems(
   return data.map(mapInboxRow);
 }
 
+export async function listSelectedDateMissionsInRange(
+  supabase: SupabaseClient,
+  ownerId: UserId,
+  startsOn: LocalDate,
+  endsOn: LocalDate,
+): Promise<MissionInboxItem[]> {
+  const { data, error } = await supabase
+    .from("missions")
+    .select(
+      "id,title,description,priority,status,estimated_duration_minutes,selected_date,category,created_at,updated_at",
+    )
+    .eq("owner_id", ownerId)
+    .eq("status", MissionStatus.UNSCHEDULED)
+    .eq("scheduling_mode", SchedulingMode.SELECTED_DATE)
+    .gte("selected_date", startsOn)
+    .lte("selected_date", endsOn)
+    .order("selected_date", { ascending: true })
+    .order("created_at", { ascending: true })
+    .returns<MissionInboxRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data.map(mapInboxRow);
+}
+
 export const missionPriorityOrder = [
   MissionPriority.URGENT,
   MissionPriority.HIGH,
