@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { appNavigation } from "@/components/app-shell/config";
 import { SettingsView } from "@/components/settings/settings-view";
+import { getDateOverrideSettings } from "@/lib/services/date-overrides";
 import { getWorkHoursSettings } from "@/lib/services/work-hours";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,7 +18,10 @@ export default async function SettingsPage() {
     redirect("/login?next=/app/settings");
   }
 
-  const schedule = await getWorkHoursSettings({ ownerId, supabase });
+  const [schedule, overrides] = await Promise.all([
+    getWorkHoursSettings({ ownerId, supabase }),
+    getDateOverrideSettings({ ownerId, supabase }),
+  ]);
 
-  return <SettingsView schedule={schedule} />;
+  return <SettingsView overrides={overrides} schedule={schedule} />;
 }

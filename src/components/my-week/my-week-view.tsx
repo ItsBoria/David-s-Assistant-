@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DEFAULT_LOCALE, t } from "@/lib/i18n";
+import { DateOverrideKind } from "@/lib/domain/work-schedule";
 import type { MyWeekDay, MyWeekReadModel } from "@/lib/my-week/read-model";
 
 const weekdayLabels = {
@@ -27,6 +28,15 @@ function formatLocalDate(value: string) {
 }
 
 function WorkHoursBadge({ day }: { day: MyWeekDay }) {
+  if (day.overrideKind === DateOverrideKind.DAY_OFF) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--muted)] px-3 py-1 text-xs font-semibold text-[var(--muted-foreground)]">
+        <Clock3 aria-hidden="true" className="size-3.5" />
+        {t(DEFAULT_LOCALE, "myWeek.dayOff")}
+      </span>
+    );
+  }
+
   if (!day.workHours.enabled) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--muted)] px-3 py-1 text-xs font-semibold text-[var(--muted-foreground)]">
@@ -39,10 +49,16 @@ function WorkHoursBadge({ day }: { day: MyWeekDay }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--primary-soft)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
       <Clock3 aria-hidden="true" className="size-3.5" />
-      {t(DEFAULT_LOCALE, "myWeek.workHours", {
-        endsAt: day.workHours.endsAt,
-        startsAt: day.workHours.startsAt,
-      })}
+      {t(
+        DEFAULT_LOCALE,
+        day.overrideKind === DateOverrideKind.CUSTOM_HOURS
+          ? "myWeek.customHours"
+          : "myWeek.workHours",
+        {
+          endsAt: day.workHours.endsAt,
+          startsAt: day.workHours.startsAt,
+        },
+      )}
     </span>
   );
 }
@@ -57,6 +73,11 @@ function WeekDayCard({ day }: { day: MyWeekDay }) {
               {t(DEFAULT_LOCALE, weekdayLabels[day.weekday])}
             </CardTitle>
             <CardDescription>{formatLocalDate(day.localDate)}</CardDescription>
+            {day.overrideReason ? (
+              <p className="mt-1 max-w-52 text-xs leading-5 text-[var(--muted-foreground)]">
+                {day.overrideReason}
+              </p>
+            ) : null}
           </div>
           <WorkHoursBadge day={day} />
         </div>

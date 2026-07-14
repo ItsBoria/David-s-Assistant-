@@ -1,7 +1,7 @@
 # Codebase Guide
 
 Last updated: 2026-07-14  
-Implementation baseline: Phase 1 plus first Phase 2 mission-inbox, work-hours, and My Week read-model slices
+Implementation baseline: Phase 1 plus Phase 2 mission-inbox, weekly/date-specific work-hours, and My Week read-model slices
 
 This document is the durable map of David's Work-Week Assistant. Code and ordered Supabase migrations remain authoritative if this guide ever drifts. Every change must update the affected sections, the decision log when a new architectural choice is made, and the change history.
 
@@ -21,17 +21,17 @@ Implemented so far:
 
 - A Next.js App Router application with strict TypeScript, Tailwind CSS v4, shadcn/ui conventions, security headers, linting, build scripts, and CI.
 - Supabase email/password sign-up, sign-in, confirmation routes, sign-out, SSR cookie handling, protected `/app` routes, and safe same-origin redirects.
-- A responsive authenticated shell with My Week, Mission Inbox, People and Meetings, and Settings destinations. These are honest empty states, not working planning screens.
+- A responsive authenticated shell with working My Week, Mission Inbox, and Work Hours destinations plus an honest People and Meetings empty state.
 - A normalized PostgreSQL foundation with owner-preserving foreign keys, RLS, integrity triggers, query indexes, a read-only calendar view, and a private export bucket.
 - Shared serializable domain types, validation/error contracts, English/Hebrew translation scaffolding, and timezone-safe Sunday-to-Thursday date helpers.
 - Unit, browser smoke-test, pgTAP database/RLS, and GitHub Actions infrastructure.
 - A first Phase 2 Mission Inbox slice: signed-in users can create selected-date, unscheduled missions through a React Hook Form client backed by a Server Action, a shared Mission service, a Supabase repository, and the existing RLS-protected `missions` table. The inbox lists the user's latest selected-date unscheduled missions from PostgreSQL.
-- A first Phase 2 Settings slice: signed-in users can view and save normal Sunday-to-Thursday work hours through a React Hook Form client backed by a Server Action, shared Work Hours service, Supabase repository, and the existing `weekly_work_schedules` / `work_schedule_periods` tables.
-- A first Phase 2 My Week slice: signed-in users can view the current Sunday-to-Thursday week with saved work hours and selected-date inbox missions grouped by target date. This is a read model, not an automatic scheduler.
+- Phase 2 Settings slices: signed-in users can view and save normal Sunday-to-Thursday work hours, then replace them for a specific date with one custom work period or a day off. The date-override workflow uses validated Server Actions, shared services/repositories, RLS, and a transactional PostgreSQL function.
+- A first Phase 2 My Week slice: signed-in users can view the current Sunday-to-Thursday week with effective work hours (date overrides take precedence) and selected-date inbox missions grouped by target date. This is a read model, not an automatic scheduler.
 
-Phases 2–8 remain planned: work-schedule and mission CRUD, the calendar, deterministic scheduling and rescheduling, recurrence generation, meetings and contacts UI, Telegram and reminder workers, PDF/DOCX generation, and production hardening. The Phase 1 schema anticipates those capabilities; it does not make them operational.
+Remaining Phase 2 work and Phases 3–8 are planned: broader work-schedule/mission workflows, the calendar, deterministic scheduling and rescheduling, recurrence generation, meetings and contacts UI, Telegram and reminder workers, PDF/DOCX generation, and production hardening. The foundation schema anticipates those capabilities; it does not make them operational.
 
-Current Phase 2 note: basic selected-date mission capture, Mission Inbox reading, normal weekly work-hours settings, and a read-only My Week dashboard are now operational. The rest of Phase 2 and later phases remain planned.
+Current Phase 2 note: basic selected-date mission capture, Mission Inbox reading, normal weekly work-hours settings, date-specific custom-hours/day-off overrides, and a read-only My Week dashboard are now operational. The rest of Phase 2 and later phases remain planned.
 
 ## 2. Architecture overview
 
@@ -61,7 +61,7 @@ Supabase
   `-- Storage -----------> private work-week-exports bucket
 ```
 
-The first domain data-access paths now exist for Mission Inbox, Work Hours settings, and My Week. `/app/inbox` delegates to `src/lib/services/missions.ts` and `src/lib/repositories/missions.ts`; `/app/settings` delegates to `src/lib/services/work-hours.ts` and `src/lib/repositories/work-hours.ts`; `/app` delegates to `src/lib/services/my-week.ts`, composing existing mission and work-hours repositories through a pure read model in `src/lib/my-week/read-model.ts`. Those modules use the regular SSR Supabase client plus the signed-in user's JWT, so PostgreSQL/RLS remains the final authorization boundary. Other domain tables are not yet read or written by the UI.
+The first domain data-access paths now exist for Mission Inbox, Work Hours settings, Date Overrides, and My Week. `/app/inbox` delegates to the Mission service/repository; `/app/settings` delegates to Work Hours and Date Override services/repositories; `/app` delegates to `src/lib/services/my-week.ts`, composing mission, weekly-hours, and override data through the pure read model in `src/lib/my-week/read-model.ts`. Those modules use the regular SSR Supabase client plus the signed-in user's JWT, so PostgreSQL/RLS remains the final authorization boundary. Date-override replacement calls the security-invoker `save_date_schedule_override` PostgreSQL function to keep header/period changes atomic. Other domain tables are not yet read or written by the UI.
 
 ### Target architecture for later phases
 
@@ -95,7 +95,7 @@ Planned background work must run in Supabase scheduled jobs/Edge Functions or an
 | `src/components/foundation/` | Honest empty-state presentation used by unfinished destinations. | Placeholder buttons with no real behavior. |
 | `src/components/missions/` | Mission Inbox presentation, create form, and mission-specific form messages. | Direct database queries, service-role access, or scheduling decisions. |
 | `src/components/my-week/` | Read-only My Week presentation combining saved work hours and selected-date inbox missions. | Scheduling/rescheduling algorithms or direct database queries. |
-| `src/components/settings/` | Settings presentation, weekly work-hours form, and settings-specific form messages. | Direct database queries, service-role access, or scheduling decisions. |
+| `src/components/settings/` | Settings presentation, weekly work-hours form, date-override manager, and settings-specific form messages. | Direct database queries, service-role access, or scheduling decisions. |
 | `src/components/ui/` | Small reusable shadcn-style primitives (`Button`, `Card`, `Input`, `Label`). | Product-specific workflows or network calls. |
 | `src/lib/domain/` | Serializable domain values, discriminated unions, transition/split invariants, notification capabilities, and public error shapes. | React components, Next.js APIs, provider SDK calls, or persistence-specific query code. |
 | `src/lib/dates/` | IANA-timezone-aware local-date and Sunday-to-Thursday week calculations. | Locale copy, UI rendering, or database access. |
@@ -103,8 +103,8 @@ Planned background work must run in Supabase scheduled jobs/Edge Functions or an
 | `src/lib/my-week/` | Pure My Week read-model assembly helpers that group already-fetched work-hours and mission data for presentation. | Supabase access, React components, or scheduling side effects. |
 | `src/lib/security/` | Cross-cutting input-security helpers such as same-origin redirect validation. | Secrets or provider configuration. |
 | `src/lib/supabase/` | Browser, server, and proxy client construction plus public-env validation. | Service-role clients in browser-reachable modules or domain-specific queries. Future privileged clients must be explicitly server-only. |
-| `src/lib/repositories/` | Server-only persistence adapters that map Supabase rows to domain-facing DTOs. The current implementation covers Mission Inbox and Work Hours queries/writes. | React components, form state, or business decisions that belong in services. |
-| `src/lib/services/` | Server-only business workflow functions shared by route actions/components. The current implementation covers basic selected-date mission creation/listing and weekly work-hours saving. | Provider SDK details, UI state, or direct browser imports. |
+| `src/lib/repositories/` | Server-only persistence adapters that map Supabase rows to domain-facing DTOs. The current implementation covers Mission Inbox, weekly work hours, and date overrides. | React components, form state, or business decisions that belong in services. |
+| `src/lib/services/` | Server-only business workflow functions shared by route actions/components. The current implementation covers basic selected-date mission creation/listing, weekly work-hours saving, date-override management, and My Week assembly. | Provider SDK details, UI state, or direct browser imports. |
 | `src/lib/validation/` | Reusable Zod boundary schemas and safe field-error mapping. | Database writes or UI state. |
 | `supabase/migrations/` | Ordered, reviewable schema, RLS, function, trigger, index, and Storage changes. | Production personal data, plaintext secrets, or undocumented dashboard-only assumptions. |
 | `supabase/tests/` | Transactional pgTAP structural and behavioral database/RLS verification. | Tests that require production users or production data. |
@@ -119,7 +119,7 @@ Future workers, provider adapters, report models, and export templates do not ex
 
 ### Conventions and extensions
 
-The schema is defined by three ordered migrations dated `20260711`. UUID primary keys use `gen_random_uuid()` from `pgcrypto`; `btree_gist` supports owner-plus-time-range indexes. All instants are `timestamptz` and are UTC on the wire. A profile stores the IANA timezone used to interpret civil dates and times. Weekdays follow PostgreSQL `extract(dow)`: Sunday `0` through Saturday `6`.
+The schema is defined by three ordered foundation migrations dated `20260711` plus the `20260714000100_date_override_service.sql` transactional function migration. UUID primary keys use `gen_random_uuid()` from `pgcrypto`; `btree_gist` supports owner-plus-time-range indexes. All instants are `timestamptz` and are UTC on the wire. A profile stores the IANA timezone used to interpret civil dates and times. Weekdays follow PostgreSQL `extract(dow)`: Sunday `0` through Saturday `6`.
 
 All time intervals use half-open semantics, `[start, end)`. Adjacent intervals are valid; intervals overlap only when `existing.start < candidate.end AND existing.end > candidate.start`. Date helpers similarly expose `startsAt` and exclusive `endsBefore` boundaries.
 
@@ -162,7 +162,7 @@ All 25 public tables have RLS enabled. `anon` and `PUBLIC` have no table access.
 - **Service only:** `telegram_link_tokens` and `telegram_update_log` expose no authenticated/anonymous policies or grants.
 - `service_role` has all table privileges and bypasses RLS by Supabase design. It must only exist in trusted server/Edge environments.
 
-The Mission Inbox runtime path reads and writes the `missions` table for authenticated owners using RLS-protected selected-date, unscheduled mission rows. The Work Hours settings runtime path reads/writes `weekly_work_schedules` and `work_schedule_periods` for authenticated owners using RLS-protected rows. The My Week runtime path reads those same mission and work-hours tables and groups them into the current Sunday-to-Thursday week. Other service names in the catalog below still identify planned ownership boundaries, not existing executable classes.
+The Mission Inbox runtime path reads and writes the `missions` table for authenticated owners using RLS-protected selected-date, unscheduled mission rows. Settings reads/writes weekly schedule tables and date-override tables. Override saves call a security-invoker function that derives `owner_id` from `auth.uid()`, uses an owner/date advisory transaction lock, validates the shape, and atomically replaces the header plus work period; removal uses owner-scoped RLS deletion. My Week reads all three inputs and applies a matching date override before weekly hours. Other service names in the catalog below still identify planned ownership boundaries, not existing executable classes.
 
 ### Identity and preferences tables
 
@@ -186,11 +186,11 @@ Civil-time work or break periods for a schedule weekday. Columns: `id`, `owner_i
 
 #### `date_schedule_overrides`
 
-One override header per owner/date. Columns: `id`, `owner_id`, `override_date`, `override_kind` (`custom_hours` or `day_off`), optional `reason`, timestamps. `(owner_id, override_date)` is unique; reason length is bounded. A trigger prevents a `day_off` row from retaining periods. Planned WorkSchedule, Scheduling, and Audit services use it. RLS: Owner CRUD. Indexes: PK and owner/date unique.
+One override header per owner/date. Columns: `id`, `owner_id`, `override_date`, `override_kind` (`custom_hours` or `day_off`), optional `reason`, timestamps. `(owner_id, override_date)` is unique; reason length is bounded. A trigger prevents a `day_off` row from retaining periods. The implemented Date Override service reads, saves, and removes it; My Week reads it, while Scheduling and Audit integration remain planned. RLS: Owner CRUD. Indexes: PK and owner/date unique.
 
 #### `date_schedule_override_periods`
 
-Work/break periods for a custom-hours override. Columns: `id`, `owner_id`, `override_id`, `period_kind`, `starts_at`, `ends_at`, timestamps. Composite FK cascades and preserves ownership; time order and exact uniqueness are checked. Triggers lock/verify the parent is `custom_hours` and reject same-kind overlap. `date_schedule_override_periods_owner_idx` supports owner/override scans. Planned WorkSchedule and Scheduling services use it. RLS: Owner CRUD.
+Work/break periods for a custom-hours override. Columns: `id`, `owner_id`, `override_id`, `period_kind`, `starts_at`, `ends_at`, timestamps. Composite FK cascades and preserves ownership; time order and exact uniqueness are checked. Triggers lock/verify the parent is `custom_hours` and reject same-kind overlap. `date_schedule_override_periods_owner_idx` supports owner/override scans. The implemented Date Override service stores one `work` period; multiple work periods and breaks remain planned. RLS: Owner CRUD.
 
 #### `unavailable_periods`
 
@@ -473,15 +473,15 @@ There is no admin UI or admin role. Supabase project operators retain infrastruc
 - `/` redirects to `/app`.
 - `/login` and `/sign-up` are responsive public auth screens.
 - `/auth/error` renders safe messages for invalid callbacks, confirmation failure, and sign-out failure.
-- `/app` (My Week), `/app/inbox` (Mission Inbox), `/app/people` (People and Meetings), and `/app/settings` (Settings) are protected Phase 1 empty states.
+- `/app` is a read-only effective-hours/mission week, `/app/inbox` is the selected-date Mission Inbox, `/app/settings` manages weekly and date-specific work hours, and `/app/people` remains an honest protected empty state.
 
 Desktop (`md` and wider) uses a fixed 248 px sidebar with four labeled destinations and an account/sign-out area. Mobile uses a sticky header, icon sign-out control, and a four-item bottom navigation with safe-area padding. Navigation resolves the longest matching route and sets `aria-current="page"`.
 
-There is no calendar/grid/day agenda, mission/work-schedule/meeting/contact/settings editor, Telegram linking panel, or export history UI yet. Those begin in Phase 2 and must use mobile day-list/agenda alternatives when a week grid is not usable.
+There is no schedulable calendar grid/day agenda, mission editor, meeting/contact editor, broader scheduling-preferences editor, Telegram linking panel, or export history UI yet. Later calendar work must use mobile day-list/agenda alternatives when a week grid is not usable.
 
 ### Components and forms
 
-`AuthShell` supplies the responsive brand/auth layout. `LoginForm` and `SignUpForm` use React Hook Form plus shared Zod schemas, submit to Server Actions, disable while pending, show an accessible spinner, and render field/form errors. `AppShell`, `ShellHeader`, and desktop/mobile navigation compose protected pages. `FoundationView` explicitly states that later services are not connected. Local UI primitives follow shadcn aliases and use `class-variance-authority`/`cn` for variants.
+`AuthShell` supplies the responsive brand/auth layout. Auth, Mission, Work Hours, and Date Override forms use React Hook Form plus shared Zod schemas, submit to Server Actions, disable while pending, show accessible progress, and render field/form errors. `DateOverrideManager` switches between day-off and custom-hours fields, lists persisted overrides, and requires explicit confirmation before removal. `AppShell`, `ShellHeader`, and desktop/mobile navigation compose protected pages. `FoundationView` explicitly states that later services are not connected. Local UI primitives follow shadcn aliases and use `class-variance-authority`/`cn` for variants.
 
 ### Design and accessibility rules
 
@@ -493,7 +493,7 @@ All visible Phase 1 copy is sourced from the centralized English/Hebrew dictiona
 
 ## 11. API and server actions
 
-There are no domain API routes, repositories, Edge Functions, cron endpoints, Telegram webhooks, or export endpoints in Phase 1.
+There are no public domain HTTP API routes, Edge Functions, cron endpoints, Telegram webhooks, or export endpoints yet. Implemented domain writes use authenticated Server Actions -> shared services -> repositories/PostgreSQL functions.
 
 | Boundary | Purpose and request | Response | Auth/validation | Side effects, tables, errors |
 | --- | --- | --- | --- | --- |
@@ -503,6 +503,9 @@ There are no domain API routes, repositories, Edge Functions, cron endpoints, Te
 | `GET /auth/callback` | Query: required `code`, optional `next`. Exchanges PKCE code. | 302 to safe internal `next` (default `/app`) or auth error. | Public one-time auth callback; Supabase validates code; `next` rejects external/protocol-relative/control/backslash input. | Establishes auth session cookies. Missing code -> `invalid_callback`; exchange error -> `confirmation_failed`. |
 | `GET /auth/confirm` | Query: `token_hash`, allowed OTP `type`, optional `next`. | 302 to safe `next` or confirmation error. | Public one-time email link; Supabase validates hash/type. | Establishes/updates auth session; sign-up can trigger profile/preferences via `auth.users`. Invalid/expired/unsupported data -> generic confirmation failure. |
 | `/app/**` proxy | Refresh auth and protect route, preserving requested path/query as `next`. | Continue with private/no-store response or 302 to login. | Verified Supabase `getClaims`, never unverified cookie session. | May rotate cookies; no application table writes. Configuration errors fail closed at runtime. |
+| `saveDateOverrideAction(input)` | Save/replace `{overrideDate,kind,reason,startsAt,endsAt}`. Day off ignores draft times; custom hours require start before end. | `{ok,message}`. | Signed-in owner; shared `saveDateOverrideSchema` validates client and server input. The PostgreSQL function derives ownership again from `auth.uid()`. | Calls `save_date_schedule_override`; atomically replaces one owner/date header and zero or one work period; revalidates Settings and My Week. |
+| `removeDateOverrideAction({overrideDate})` | Remove one date-specific override so weekly hours apply again. | `{ok,message}`. | Signed-in owner; valid civil date; repository filters by JWT owner and RLS enforces isolation. | Deletes the override header and cascades periods; revalidates Settings and My Week. Missing/stale records return a safe generic error. |
+| `save_date_schedule_override(date,kind,reason,start,end)` PostgreSQL function | Transactional write boundary used by Settings. | Saved override UUID or SQL error. | `security invoker`; executable by `authenticated`/`service_role`, revoked from `anon`/`PUBLIC`; owner comes only from `auth.uid()`. | Uses an owner/date advisory lock, validates shape/length, safely converts custom-hours ↔ day-off, and leaves no partial header/period state on failure. |
 
 `forgotPasswordSchema` and `resetPasswordSchema` exist as validation foundations, but there are no forgot/reset pages or actions. `/auth/error` is a rendered page, not an API. Future boundaries must use typed requests, shared Zod/domain validation, the `AppErrorResponse` shape where appropriate, safe user messages, and secure server diagnostics.
 
@@ -585,8 +588,8 @@ Rollback success includes restored auth, owner isolation, no duplicate notificat
 
 | Layer | Implemented Phase 1 coverage | Required later |
 | --- | --- | --- |
-| Unit/Vitest | Auth normalization/bounds/errors; mission creation validation; work-hours validation; My Week read-model grouping; mission status transitions and split feasibility; error contract; safe redirects; locale/direction helpers; Sunday-to-Thursday/DST/date validation with half-open bounds. | Priority/deadline scoring, work/override availability, slot subtraction, conflict detection, splitting placements, recurrence, reminder times, report-data preparation. |
-| Database/pgTAP | 17 transactional checks: schema/enums/indexes/triggers/grants/RLS structure, bootstrap, two-owner isolation, security-invoker view isolation, feasible/impossible split policies, completion/provenance guards, completion snapshot/identity immutability, physical-delete denial, period-overlap rejection, service-only token denial, anonymous denial, and private bucket. | Service transaction integration, rescheduling, recurrence idempotency, completion/outbox/update idempotency, retry claims, export metadata/storage authorization. |
+| Unit/Vitest | Auth normalization/bounds/errors; mission creation validation; weekly/date-override validation; My Week grouping and date-override precedence; mission status transitions and split feasibility; error contract; safe redirects; locale/direction helpers; Sunday-to-Thursday/DST/date validation with half-open bounds. | Priority/deadline scoring, full multi-period override availability, slot subtraction, conflict detection, splitting placements, recurrence, reminder times, report-data preparation. |
+| Database/pgTAP | 17 foundation checks plus 10 transactional date-override checks: schema/grants/RLS, bootstrap/isolation, core lifecycle constraints, authenticated custom-hours save, atomic conversion to day off, invalid-shape rollback, and owner removal. | Rescheduling, recurrence idempotency, completion/outbox/update idempotency, retry claims, export metadata/storage authorization. |
 | Browser/Playwright | Desktop Chrome and Pixel 7 projects verify the public login form, semantics, validation, and recovery after errors without live credentials. | Real local auth/confirmation and protected shell; mission, plan, meeting, work-hours, completion, Telegram-with-mocks, and export journeys. |
 | CI | Separate quality (`lint`, typecheck, unit, build), Chromium E2E, and Docker-backed Supabase reset/pgTAP jobs. Dependabot covers npm and Actions. | Provider contract tests, Edge Function tests, export visual/content regression, load/concurrency checks, accessibility audit. |
 
@@ -608,13 +611,14 @@ High-risk scheduling tests must include DST boundaries, Sunday/Thursday/Friday t
 | ADR-008 / 2026-07-11 | Use Supabase email/password confirmation with SSR cookies and verified claims at proxy and layout boundaries. | Trusting cookie session contents alone is insufficient; custom credential storage is unsafe. | Auth depends on correct redirect/email configuration; recovery/invite workflows remain to implement. |
 | ADR-009 / 2026-07-11 | Do not configure cron, Edge Functions, webhook, or fake dashboard-only runtime before executable services exist. | Orphan schedules/endpoints create security and operational drift. | Schema is ready, but later phases must deliver code, migrations/config, tests, and documentation together. |
 | ADR-010 / 2026-07-13 | Allow only reviewed `sharp` and `unrs-resolver` lifecycle builds under pnpm 11. | pnpm's default hardening blocks scripts; these native builds are required for Next image/ESLint tooling. | New install scripts fail until explicitly reviewed and documented. |
+| ADR-011 / 2026-07-14 | Save a date override through one security-invoker PostgreSQL function instead of separate browser-visible header/period mutations. | Converting custom hours to a day off requires deleting periods before updating the header trigger; multiple HTTP statements could leave a partial valid-but-wrong state. A service-role API was unnecessary because ordinary owner CRUD already has RLS. | The function derives the owner from `auth.uid()`, serializes concurrent owner/date writes, remains subject to RLS, and must evolve when multi-period override editing is added. |
 
 ## 17. Known limitations
 
-- Phase 1 is implemented plus narrow Mission Inbox, Work Hours settings, and My Week read-model slices. People and Meetings still shows an honest empty state.
-- Mission and Work Hours service/repository implementations exist only for selected-date unscheduled mission creation/listing and one normal work period per Sunday-to-Thursday day. Meeting, Scheduling, Recurrence, Completion, Reminder, Notification, Contact, Telegram, Export, and Audit service implementations do not exist yet.
+- Phase 1 is implemented plus narrow Mission Inbox, weekly/date-specific Work Hours settings, and My Week read-model slices. People and Meetings still shows an honest empty state.
+- Mission and Work Hours service/repository implementations cover selected-date unscheduled mission creation/listing, one normal work period per Sunday-to-Thursday day, and one custom period or day off per specific date. Meeting, Scheduling, Recurrence, Completion, Reminder, Notification, Contact, Telegram, Export, and Audit service implementations do not exist yet.
 - The database permits owner writes for ordinary domain tables, with additional lifecycle guards on missions/occurrences/sessions. The implemented mission workflow routes through shared server-side service/repository modules; future workflows should follow that pattern.
-- No date override, calendar placement, recurrence, meeting, contact, completion, reminder, Telegram, or export end-user workflow exists. My Week is read-only and does not automatically schedule missions into time slots. Mission editing, deletion, completion, recurrence, flexible deadlines, weekday/date-set constraints, fixed-time mission creation, multiple periods per day, breaks, date-specific overrides, and splitting controls are not implemented.
+- No calendar placement, recurrence, meeting, contact, completion, reminder, Telegram, or export end-user workflow exists. My Week is read-only and does not automatically schedule missions into time slots. Mission editing/deletion/completion, recurrence, flexible deadlines, weekday/date-set constraints, fixed-time mission creation, multiple weekly or override periods, breaks, and splitting controls are not implemented.
 - The deterministic scheduler, scoring policy, preview/result contract, transaction API, and automatic rescheduling are not implemented.
 - Recurrence rules and occurrence uniqueness exist, but there is no generator or editing-scope transaction.
 - Telegram tables/contracts exist, but there is no bot/webhook/linking/callback/parser/provider worker. No notification provider is active.
@@ -628,10 +632,13 @@ High-risk scheduling tests must include DST boundaries, Sunday/Thursday/Friday t
 - Database tests require Docker/local Supabase; environments without Docker cannot execute them. Playwright requires installed Chromium.
 - Persistence currently has one `maximum_daily_work_minutes` cap, not distinct mission, meeting, and total scheduled caps. The TypeScript schedule aggregate anticipates those distinctions; Phase 2 must reconcile the aggregate and add any required migration before the scheduler relies on them.
 - Database constraints deliberately do not validate that break periods are contained inside work periods; the future WorkSchedule service must enforce aggregate containment.
+- Settings lists at most the next 50 current/future date overrides and currently supports only one `work` period per date; historical browsing, multiple periods, break containment, and unavailable-time editing remain future work.
 - The calendar overlap trigger rejects a newly inserted fixed meeting if a flexible session still occupies the slot; the future scheduler must move the flexible session first inside one transaction.
 - Security headers are a baseline, not a complete production review; CSP, rate limits, abuse monitoring, secret rotation, backup/PITR, observability, and incident procedures remain Phase 8 work.
 
 ## 18. Change history
+
+- **2026-07-14 — Date-specific work hours:** Added transactional custom-hours/day-off saves, owner-scoped removal, Settings management UI, My Week override precedence and reasons, a new ordered migration, validation/read-model unit coverage, and dedicated pgTAP service checks.
 
 - **2026-07-11 — Phase 1 foundation:** Created the Next.js/TypeScript/Tailwind/shadcn project, Supabase SSR email/password auth, protected responsive shell, centralized validation/i18n/date/domain contracts, normalized 25-table schema, RLS/grants, ownership and overlap triggers, calendar view, private export bucket, test infrastructure, CI, environment example, and repository instructions.
 - **2026-07-13 — Phase 1 alignment and documentation:** Hardened same-origin redirects, canonical confirmation origins, cookie-write failures, and sign-out/confirmation behavior; aligned mission occurrence/session/completion domain contracts with persistence; standardized half-open work-week boundaries and rejected DST ambiguity, skipped midnights, and nonexistent civil dates; centralized all visible Phase 1 English/Hebrew copy and derived document direction from the default locale; enforced split feasibility, status/provenance/completion guards, history retention, and completion reschedule snapshots in PostgreSQL; expanded auth, redirect, browser, and database/RLS verification; documented the implemented foundation and planned Phase 2–8 architecture in this guide.
